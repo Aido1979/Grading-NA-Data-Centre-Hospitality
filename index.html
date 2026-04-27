@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>North American Data Centre Investment Grader</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0f14;--surface:#13161e;--border:#1f2433;--text:#c8cdd8;--muted:#5a6070;--bright:#e8eaf0;--ocean:#060c14;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:"DM Mono",monospace;font-size:13px;line-height:1.6;min-height:100vh;}
+.wrapper{max-width:1200px;margin:0 auto;padding:0 24px 80px;}
+header{padding:48px 0 36px;border-bottom:1px solid var(--border);margin-bottom:36px;}
+.header-label{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
+h1{font-family:"Fraunces",serif;font-size:clamp(22px,4vw,44px);font-weight:700;color:var(--bright);line-height:1.1;margin-bottom:10px;letter-spacing:-0.02em;}
+.subtitle{color:var(--muted);font-size:12px;max-width:720px;line-height:1.7;}
+.update-badge{display:inline-block;margin-top:14px;font-size:10px;letter-spacing:0.1em;color:var(--muted);border:1px solid var(--border);padding:3px 10px;border-radius:2px;}
+.canada-note{margin-top:12px;font-size:11px;color:#a070e0;border-left:2px solid #3a2860;padding-left:10px;line-height:1.6;}
+.curve-toggle-section{margin-bottom:28px;}
+.curve-toggle-label{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.curve-toggle{display:inline-flex;border:1px solid var(--border);border-radius:3px;overflow:hidden;flex-wrap:wrap;}
+.curve-btn{font-size:11px;padding:8px 18px;background:transparent;color:var(--muted);border:none;cursor:pointer;font-family:"DM Mono",monospace;transition:all 0.12s;letter-spacing:0.04em;}
+.curve-btn:not(:last-child){border-right:1px solid var(--border);}
+.curve-btn.active{background:var(--surface);color:var(--bright);}
+.curve-btn:hover:not(.active){color:var(--text);}
+.curve-context{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6;}
+.methodology{display:flex;gap:2px;margin-bottom:28px;flex-wrap:wrap;}
+.method-item{flex:1;min-width:100px;background:var(--surface);border:1px solid var(--border);padding:12px 14px;}
+.method-weight{font-family:"Fraunces",serif;font-size:20px;color:var(--bright);margin-bottom:2px;}
+.method-name{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:4px;}
+.method-desc{font-size:10px;color:var(--muted);line-height:1.4;}
+.grade-scale{display:flex;gap:2px;margin-bottom:28px;flex-wrap:wrap;}
+.grade-block{flex:1;min-width:60px;padding:10px 12px;text-align:center;}
+.grade-letter{font-family:"Fraunces",serif;font-size:24px;font-weight:700;}
+.grade-desc{font-size:9px;letter-spacing:0.08em;text-transform:uppercase;margin-top:2px;opacity:0.7;}
+.grade-count{font-size:10px;margin-top:4px;opacity:0.6;}
+.map-section{margin-bottom:28px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:24px;}
+.map-section-label{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+.map-layout{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;}
+.map-container{flex:1;min-width:280px;background:var(--ocean);border-radius:3px;overflow:hidden;}
+#na-map{width:100%;height:auto;display:block;}
+.prov{stroke:#060c14;stroke-width:0.5;cursor:pointer;transition:opacity 0.12s,stroke-width 0.12s;}
+.prov:hover{opacity:0.75;stroke-width:1.5;stroke:rgba(255,255,255,0.4);}
+.map-sidebar{min-width:160px;}
+.map-legend{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}
+.legend-row{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted);}
+.legend-swatch{width:14px;height:14px;border-radius:2px;flex-shrink:0;font-family:"Fraunces",serif;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;color:rgba(0,0,0,0.75);}
+.filter-btns{display:flex;flex-direction:column;gap:5px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);}
+.filter-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.filter-btn{font-size:10px;padding:5px 10px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;border-radius:2px;text-align:left;transition:all 0.12s;font-family:"DM Mono",monospace;}
+.filter-btn:hover{border-color:#2a3a54;color:var(--text);}
+.filter-btn.active{border-color:#2a3a54;color:var(--bright);background:#13161e;}
+.dist-bar{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+.dist-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px;}
+.dist-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.dist-grade{font-family:"Fraunces",serif;font-size:11px;font-weight:700;width:14px;text-align:center;}
+.dist-track{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.dist-fill{height:100%;border-radius:3px;transition:width 0.4s ease;}
+.dist-count{font-size:10px;color:var(--muted);width:20px;text-align:right;}
+#map-tooltip{position:fixed;background:#111520;border:1px solid var(--border);padding:10px 14px;border-radius:3px;pointer-events:none;z-index:100;opacity:0;transition:opacity 0.1s;max-width:260px;}
+#map-tooltip.visible{opacity:1;}
+.tt-name{font-family:"Fraunces",serif;font-size:14px;color:var(--bright);margin-bottom:3px;}
+.tt-grade{font-family:"Fraunces",serif;font-size:22px;font-weight:700;float:right;line-height:1;}
+.tt-country{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.tt-score{font-size:10px;color:var(--muted);margin-bottom:6px;}
+.tt-bars{display:flex;flex-direction:column;gap:3px;}
+.tt-bar-row{display:flex;align-items:center;gap:6px;}
+.tt-bar-label{font-size:8px;color:var(--muted);width:68px;flex-shrink:0;text-transform:uppercase;letter-spacing:0.04em;}
+.tt-bar-track{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.tt-bar-fill{height:100%;border-radius:2px;}
+.tabs{display:flex;gap:2px;margin-bottom:20px;flex-wrap:wrap;}
+.tab{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;padding:8px 14px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:"DM Mono",monospace;transition:all 0.12s;}
+.tab.active{background:var(--surface);color:var(--bright);border-color:#2a3a54;}
+.tab:hover:not(.active){color:var(--text);}
+.section-heading{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.province-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px;margin-bottom:48px;}
+.province-card{background:var(--surface);border:1px solid var(--border);border-left-width:3px;padding:20px 20px 16px;cursor:pointer;transition:background 0.15s;position:relative;}
+.province-card:hover{background:#161920;}
+.province-card.hidden{display:none;}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;padding-left:8px;}
+.card-name-block{flex:1;}
+.province-name{font-family:"Fraunces",serif;font-size:17px;color:var(--bright);font-weight:700;}
+.province-meta{display:flex;gap:6px;align-items:center;margin-top:3px;flex-wrap:wrap;}
+.province-abbr{font-size:10px;color:var(--muted);}
+.country-badge{font-size:8px;letter-spacing:0.1em;text-transform:uppercase;padding:1px 5px;border-radius:2px;}
+.country-badge.ca{background:#1e1430;color:#a070e0;border:1px solid #3a2860;}
+.country-badge.us{background:#1a2030;color:#6090d0;border:1px solid #283856;}
+.card-grade-block{text-align:right;flex-shrink:0;margin-left:12px;}
+.card-grade{font-family:"Fraunces",serif;font-size:38px;font-weight:700;line-height:1;}
+.card-grade-change{font-size:9px;margin-top:2px;letter-spacing:0.04em;}
+.card-rank{font-size:9px;color:var(--muted);margin-top:1px;}
+.score-bars{padding-left:8px;margin-bottom:10px;}
+.score-row{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
+.score-label{font-size:9px;color:var(--muted);width:80px;flex-shrink:0;text-transform:uppercase;letter-spacing:0.04em;}
+.score-track{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.score-fill{height:100%;border-radius:3px;}
+.score-val{font-size:9px;color:var(--muted);width:12px;text-align:right;}
+.card-notes{padding-left:8px;font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:8px;}
+.card-econ{font-size:11px;color:#6090a8;line-height:1.5;margin-bottom:10px;border-left:2px solid #1f3040;padding-left:10px;margin-left:8px;}
+.traj-line{display:flex;align-items:center;gap:6px;padding-left:8px;}
+.traj-icon{font-size:14px;font-weight:700;}
+.traj-text{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;}
+.detail-panel{display:none;grid-column:1/-1;background:#0b0e16;border:1px solid var(--border);border-top:none;padding:24px;animation:slideDown 0.2s ease;}
+.detail-panel.visible{display:block;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.detail-header{display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;}
+.detail-grade-block{text-align:center;min-width:80px;}
+.detail-grade{font-family:"Fraunces",serif;font-size:64px;font-weight:700;line-height:1;}
+.detail-grade-sub{font-size:10px;color:var(--muted);margin-top:4px;}
+.detail-grade-change{font-size:11px;margin-top:4px;font-weight:500;}
+.detail-body{flex:1;min-width:200px;}
+.detail-name{font-family:"Fraunces",serif;font-size:22px;color:var(--bright);margin-bottom:6px;}
+.detail-meta{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;}
+.detail-summary{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:8px;}
+.detail-econ{font-size:12px;color:#6090a8;line-height:1.65;margin-bottom:12px;padding:10px 12px;background:#0d1520;border:1px solid #1f3040;border-radius:3px;}
+.detail-econ-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#4a7090;margin-bottom:4px;}
+.detail-traj{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:3px;}
+.detail-traj-header{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;}
+.score-detail-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px;}
+.score-detail-item{background:var(--surface);border:1px solid var(--border);padding:8px;}
+.score-detail-val{font-family:"Fraunces",serif;font-size:18px;}
+.score-detail-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;line-height:1.3;}
+@media(max-width:600px){.score-detail-grid{grid-template-columns:repeat(3,1fr);}}
+.audience-toggle{display:flex;gap:2px;margin-bottom:20px;flex-wrap:wrap;}
+.aud-btn{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;padding:7px 16px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:"DM Mono",monospace;transition:all 0.12s;border-radius:2px;}
+.aud-btn.active{background:var(--surface);color:var(--bright);border-color:#2a3a54;}
+.aud-btn:hover:not(.active){color:var(--text);}
+.audience-panel{display:none;}
+.audience-panel.visible{display:block;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:640px){.detail-grid{grid-template-columns:1fr;}}
+.detail-section-label{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.detail-items{list-style:none;}
+.detail-items li{font-size:12px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border);line-height:1.6;display:flex;gap:8px;}
+.detail-items li::before{content:"→";color:var(--muted);flex-shrink:0;}
+.audience-note{font-size:11px;color:var(--muted);line-height:1.6;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:3px;margin-bottom:14px;}
+.close-btn{float:right;font-size:11px;color:var(--muted);cursor:pointer;padding:2px 8px;border:1px solid var(--border);border-radius:2px;margin-left:12px;margin-bottom:16px;transition:color 0.12s;}
+.close-btn:hover{color:var(--bright);}
+/* Mobile map hide */
+@media(max-width:680px){
+  .map-section{display:none;}
+  .mobile-grade-summary{display:block;}
+}
+@media(min-width:681px){
+  .mobile-grade-summary{display:none;}
+}
+.mobile-grade-summary{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:20px;margin-bottom:28px;}
+.mobile-grade-summary-label{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.mobile-grade-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.mobile-grade-letter{font-family:"Fraunces",serif;font-size:22px;font-weight:700;width:24px;}
+.mobile-grade-bar{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
+.mobile-grade-fill{height:100%;border-radius:4px;}
+.mobile-grade-count{font-size:11px;color:var(--muted);width:80px;text-align:right;}
+footer{border-top:1px solid var(--border);padding-top:24px;font-size:11px;color:var(--muted);line-height:1.7;}
+@media(max-width:480px){
+  .wrapper{padding:0 14px 60px;}
+  header{padding:28px 0 24px;}
+  .province-grid{grid-template-columns:1fr;}
+  .methodology{gap:2px;}
+  .method-item{min-width:80px;padding:8px 10px;}
+  .tabs{gap:2px;}
+  .tab{padding:6px 10px;font-size:9px;}
+}
+</style>
+</head>
+<body>
+<div class="wrapper">
+<header>
+  <div class="header-label">StrategyCorp — Policy Intelligence</div>
+  <h1>Canadian & North American<br>Data Centre Investment Grader</h1>
+  <p class="subtitle">Bell-curve grades across Canadian provinces and US states on six weighted dimensions including power economics (rate × PUE efficiency). Each card provides advice to applicants and to governments. Switch between North American, Canada-only, and US-only curves.</p>
+  <p class="canada-note">Developed for a Canadian audience. Canada tab loads by default. All provincial assessments reflect April 2026 policy conditions.</p>
+  <span class="update-badge">Last updated: April 2026</span>
+</header>
+
+<div class="curve-toggle-section">
+  <div class="curve-toggle-label">Grading curve</div>
+  <div class="curve-toggle">
+    <button class="curve-btn" data-curve="na">North America (59)</button>
+    <button class="curve-btn active" data-curve="ca">Canada only (11)</button>
+    <button class="curve-btn" data-curve="us">United States only (48)</button>
+  </div>
+  <div class="curve-context" id="curveContext">Canada-only curve — 11 provinces and territories graded against each other.</div>
+</div>
+
+<div class="methodology">
+  <div class="method-item"><div class="method-weight">25%</div><div class="method-name">Power Access</div><div class="method-desc">Reliability, supply certainty, connection speed</div></div>
+  <div class="method-item"><div class="method-weight">22%</div><div class="method-name">Regulatory Ease</div><div class="method-desc">Land use, zoning, permitting, connection approval</div></div>
+  <div class="method-item"><div class="method-weight">20%</div><div class="method-name">Power Economics</div><div class="method-desc">Utility $/kWh × climate PUE + capex/kW</div></div>
+  <div class="method-item"><div class="method-weight">13%</div><div class="method-name">Power Quality</div><div class="method-desc">Carbon intensity, clean supply, BYOG viability</div></div>
+  <div class="method-item"><div class="method-weight">12%</div><div class="method-name">Market Proximity</div><div class="method-desc">Latency to population centres, fibre</div></div>
+  <div class="method-item"><div class="method-weight">8%</div><div class="method-name">Sustainability</div><div class="method-desc">Social licence, supply headroom, political stability</div></div>
+</div>
+
+<div class="grade-scale">
+  <div class="grade-block" style="background:#1a3d2b;border:1px solid #1d5c3a"><div class="grade-letter" style="color:#2ecf7a">A</div><div class="grade-desc" style="color:#2ecf7a">Top 10%</div><div class="grade-count" id="count-A" style="color:#2ecf7a"></div></div>
+  <div class="grade-block" style="background:#243520;border:1px solid #2d5c20"><div class="grade-letter" style="color:#7ecf50">B</div><div class="grade-desc" style="color:#7ecf50">Next 20%</div><div class="grade-count" id="count-B" style="color:#7ecf50"></div></div>
+  <div class="grade-block" style="background:#3a2c10;border:1px solid #5c3e10"><div class="grade-letter" style="color:#e8a730">C</div><div class="grade-desc" style="color:#e8a730">Middle 40%</div><div class="grade-count" id="count-C" style="color:#e8a730"></div></div>
+  <div class="grade-block" style="background:#3a1f10;border:1px solid #5c2810"><div class="grade-letter" style="color:#e86020">D</div><div class="grade-desc" style="color:#e86020">Next 20%</div><div class="grade-count" id="count-D" style="color:#e86020"></div></div>
+  <div class="grade-block" style="background:#3a1010;border:1px solid #5c1a1a"><div class="grade-letter" style="color:#e84040">F</div><div class="grade-desc" style="color:#e84040">Bottom 10%</div><div class="grade-count" id="count-F" style="color:#e84040"></div></div>
+</div>
+
+<!-- Desktop map -->
+<div class="map-section">
+  <div class="map-section-label">Grade by jurisdiction — hover for scorecard, click card below to expand</div>
+  <div class="map-layout">
+    <div class="map-container">
+      <svg id="na-map" viewBox="0 0 960 680" xmlns="http://www.w3.org/2000/svg">
+        <rect width="960" height="680" fill="#060c14"/>
+<path data-id="ca" data-country="us" class="prov" style="fill:#e8a730" d="M64.7,497.0L118.1,506.3L104.2,536.2L123.7,553.1L139.3,566.9L161.9,586.6L163.7,592.5L166.6,594.8L159.7,597.6L159.3,599.8L154.9,602.6L154.0,605.9L156.9,607.3L152.3,609.7L116.3,606.9L115.8,600.7L114.0,598.0L106.3,592.3L102.8,592.1L102.2,588.8L98.2,588.6L93.1,586.2L89.9,587.4L77.7,585.4L82.8,585.4L89.9,587.3L92.8,585.1L88.6,582.7L76.5,580.5L74.7,578.7L77.5,573.2L71.0,566.5L66.0,555.9L69.6,554.0L63.3,548.7L64.7,542.7L69.5,547.0L66.6,539.4L64.7,542.3L60.8,539.3L60.0,534.6L54.5,528.5L57.7,519.3L53.5,513.8L53.8,511.9L60.9,506.7L63.6,502.9L64.7,497.0Z"/>
+<path data-id="or" data-country="us" class="prov" style="fill:#2ecf7a" d="M118.1,506.3L64.7,497.0L63.8,493.3L65.2,487.9L75.7,478.7L81.9,469.5L87.9,462.6L90.2,456.0L99.7,458.0L102.5,459.3L102.2,464.1L107.4,466.1L113.9,465.5L120.8,467.6L132.6,468.4L141.3,467.8L148.6,468.0L174.3,471.7L177.6,476.7L170.4,482.8L164.1,486.6L163.4,488.4L166.7,490.1L163.5,493.9L156.4,511.9L118.1,506.3Z"/>
+<path data-id="nd" data-country="us" class="prov" style="fill:#e8a730" d="M367.9,456.7L415.1,457.7L416.8,457.7L418.3,461.3L417.8,466.3L421.0,473.5L421.6,482.4L424.0,485.7L424.4,489.7L410.0,489.5L331.4,487.1L331.8,485.1L336.2,455.3L365.7,456.6L367.9,456.7Z"/>
+<path data-id="sk" data-country="ca" class="prov" style="fill:#e8a730" d="M367.9,456.7L355.3,456.2L336.2,455.3L266.4,450.3L266.4,450.3L297.6,332.9L369.0,337.6L373.8,337.8L368.6,383.8L367.9,456.7Z"/>
+<path data-id="mt" data-country="us" class="prov" style="fill:#e86020" d="M266.4,450.3L336.2,455.3L331.8,485.1L331.4,487.1L330.1,496.8L329.8,496.8L242.3,490.3L240.8,495.4L238.3,492.7L235.4,494.0L226.2,493.3L224.4,494.0L216.4,493.3L213.4,489.5L208.7,479.4L203.4,481.0L201.1,479.8L204.0,476.7L204.6,472.8L207.2,468.7L204.6,468.8L197.7,461.3L193.8,459.0L194.8,456.3L192.1,452.7L196.1,442.6L218.8,445.4L219.0,445.4L264.9,450.2L266.4,450.3Z"/>
+<path data-id="az" data-country="us" class="prov" style="fill:#e8a730" d="M161.9,586.6L164.5,575.4L172.8,577.0L174.5,575.3L177.3,567.4L223.0,572.2L247.1,574.4L239.8,603.4L232.7,632.6L203.0,629.9L150.0,611.6L152.3,609.7L156.9,607.3L154.0,605.9L154.9,602.6L159.3,599.8L159.7,597.6L166.6,594.8L163.7,592.5L161.9,586.6Z"/>
+<path data-id="nv" data-country="us" class="prov" style="fill:#e8a730" d="M177.3,567.4L174.5,575.3L172.8,577.0L164.5,575.4L161.9,586.6L139.3,566.9L123.7,553.1L104.2,536.2L118.1,506.3L156.4,511.9L182.7,515.3L194.7,516.8L184.9,545.3L177.3,567.4Z"/>
+<path data-id="al" data-country="us" class="prov" style="fill:#e86020" d="M563.7,646.1L560.4,648.7L548.7,647.9L545.2,632.3L546.6,601.0L545.1,600.0L545.0,599.9L582.5,598.0L592.6,618.5L598.5,625.1L595.9,630.0L599.6,638.4L560.2,640.8L563.7,646.1Z"/>
+<path data-id="nm" data-country="us" class="prov" style="fill:#e86020" d="M272.1,630.9L246.3,629.0L245.3,633.6L232.7,632.6L239.8,603.4L247.1,574.4L332.2,579.9L331.7,583.8L331.5,585.1L330.9,585.2L324.4,631.5L270.1,628.4L272.1,630.9Z"/>
+<path data-id="co" data-country="us" class="prov" style="fill:#e8a730" d="M332.2,579.9L247.1,574.4L255.6,539.9L257.2,533.6L323.6,538.1L350.3,539.3L349.1,549.6L348.5,556.4L345.7,580.5L332.2,579.9Z"/>
+<path data-id="wy" data-country="us" class="prov" style="fill:#e8a730" d="M323.6,538.1L257.2,533.6L230.6,531.2L233.6,521.0L235.8,513.0L240.8,495.4L242.3,490.3L329.8,496.8L327.3,513.6L326.8,517.5L326.1,521.4L323.6,538.1Z"/>
+<path data-id="wi" data-country="us" class="prov" style="fill:#e8a730" d="M479.0,480.4L483.0,481.0L492.9,478.2L500.2,481.7L504.0,484.2L528.3,487.1L533.5,489.6L533.4,493.1L537.1,495.5L532.4,501.3L539.2,497.7L544.3,493.1L540.9,498.7L537.4,507.8L538.1,510.0L536.0,514.7L538.6,522.6L520.1,523.4L501.5,524.0L496.1,521.8L492.7,514.1L491.6,509.8L486.9,508.3L481.0,504.7L471.7,501.5L473.1,494.4L470.3,493.1L472.3,489.5L477.3,487.7L476.9,481.6L479.0,480.4Z"/>
+<path data-id="ks" data-country="us" class="prov" style="fill:#e8a730" d="M349.1,549.6L440.7,551.2L446.6,553.0L443.7,556.1L450.4,560.2L451.0,582.1L345.7,580.5L348.5,556.4L349.1,549.6Z"/>
+<path data-id="ne" data-country="us" class="prov" style="fill:#e8a730" d="M440.7,551.2L349.1,549.6L350.3,539.3L323.6,538.1L326.1,521.4L326.8,517.5L399.0,520.0L404.2,522.1L414.4,521.3L425.0,525.2L430.6,532.7L430.2,535.2L433.1,537.7L434.5,544.9L436.3,547.6L440.7,551.2Z"/>
+<path data-id="ok" data-country="us" class="prov" style="fill:#e8a730" d="M345.7,580.5L451.0,582.1L451.1,587.2L453.9,598.8L453.8,616.8L442.8,613.6L432.3,614.3L426.5,616.3L417.8,613.6L414.9,616.0L406.6,613.2L402.4,614.1L400.6,611.6L394.7,612.1L384.3,610.3L383.4,608.5L377.3,608.5L372.8,606.5L374.2,586.6L331.5,585.1L331.7,583.8L332.2,579.9L345.7,580.5Z"/>
+<path data-id="mi" data-country="us" class="prov" style="fill:#7ecf50" d="M531.6,471.4L523.7,475.1L523.2,472.5L527.6,471.1L531.6,471.4ZM597.0,526.6L586.0,527.7L579.4,528.3L579.3,527.7L552.5,529.5L557.7,524.0L558.4,516.6L552.9,510.0L552.5,505.3L555.1,502.1L554.5,498.8L561.4,493.2L561.8,496.6L564.6,495.6L564.3,492.6L569.2,490.6L567.5,488.1L570.9,486.1L587.6,489.5L590.8,492.3L589.1,493.1L592.0,496.0L592.1,499.9L589.7,502.9L586.4,503.9L586.7,507.1L589.7,507.6L594.4,503.3L598.1,502.1L601.5,503.4L607.3,512.4L607.1,516.3L605.6,517.3L603.1,516.5L600.9,520.4L600.6,520.7L597.0,526.6ZM572.9,479.1L577.4,478.0L577.9,479.9L576.3,481.4L585.5,483.6L571.8,483.4L571.2,485.5L567.4,484.0L561.0,483.6L559.8,484.9L552.3,485.8L547.2,489.0L548.5,486.6L543.6,488.7L543.2,486.8L537.1,495.5L533.4,493.1L533.5,489.6L528.3,487.1L504.0,484.2L500.2,481.7L507.4,478.9L512.2,478.3L520.9,474.0L523.7,476.6L533.9,477.7L537.7,480.7L547.2,480.7L552.2,478.1L559.9,477.6L566.6,476.1L565.8,478.8L572.9,479.1Z"/>
+<path data-id="oh" data-country="us" class="prov" style="fill:#2ecf7a" d="M597.0,526.6L610.5,529.0L621.1,526.7L624.7,524.2L634.8,520.6L638.8,534.2L637.1,545.1L633.0,547.8L629.6,548.2L625.3,554.0L622.8,552.9L620.6,559.0L617.1,559.5L612.2,556.5L606.8,558.5L594.0,557.3L590.0,554.6L584.9,555.0L580.4,532.5L579.4,528.3L586.0,527.7L597.0,526.6Z"/>
+<path data-id="bc" data-country="ca" class="prov" style="fill:#e8a730" d="M168.6,315.3L203.7,321.3L173.7,386.1L174.2,391.2L178.4,394.2L183.4,395.8L186.2,401.1L185.9,404.5L188.6,403.6L191.7,407.9L194.8,408.0L197.0,413.1L200.2,412.6L207.9,424.0L215.9,430.4L215.4,436.5L213.4,438.4L219.0,445.4L218.8,445.4L196.1,442.6L184.6,441.1L120.5,431.0L119.3,430.8L117.5,429.4L116.2,430.2L115.5,430.1L115.5,424.7L112.4,425.1L108.1,421.7L111.3,419.9L102.5,418.7L103.6,415.6L99.7,415.8L102.3,413.1L98.9,409.8L95.2,410.1L84.9,407.1L89.0,404.9L89.0,403.1L82.4,403.4L78.0,400.4L76.7,397.5L78.5,393.0L82.3,387.9L81.5,384.1L78.8,385.6L83.6,379.8L77.7,384.8L80.7,376.8L76.1,373.7L77.7,370.5L81.4,370.3L85.7,367.6L77.0,370.3L74.4,372.4L70.2,365.2L68.9,360.7L72.6,356.9L71.1,356.5L80.6,352.2L81.3,348.7L84.3,345.6L84.7,343.4L74.0,335.1L71.9,334.7L71.0,331.3L72.9,329.8L70.5,312.7L66.4,303.8L63.0,298.4L64.7,297.4L62.7,293.7L53.5,293.7L47.6,297.5L43.5,297.6L38.4,297.8L39.5,294.1L33.5,282.8L33.6,282.9L168.6,315.3Z"/>
+<path data-id="nu" data-country="ca" class="prov" style="fill:#e84040" d="M699.2,268.5L703.4,269.7L705.8,274.0L703.3,273.6L699.8,270.5L707.2,277.8L701.2,278.2L707.8,282.1L711.7,281.5L711.2,283.6L708.0,283.7L702.5,281.3L688.2,279.6L675.8,275.1L678.5,277.7L667.3,275.1L674.9,280.2L681.8,281.3L695.6,285.8L702.4,291.3L700.0,292.1L689.0,290.8L677.7,291.6L672.8,291.0L666.5,288.8L660.2,288.6L645.3,286.0L644.2,283.3L647.0,281.1L643.9,279.9L640.0,280.9L636.7,278.0L633.7,279.7L630.0,276.6L623.3,273.2L617.8,271.6L614.1,276.4L603.7,274.9L601.8,278.9L592.1,280.9L587.4,279.9L583.4,277.0L582.6,273.4L588.5,269.9L592.9,266.7L601.3,268.1L605.6,267.0L610.3,265.3L613.8,262.4L618.9,262.6L616.2,259.8L607.4,255.8L616.0,246.8L619.4,242.1L613.7,234.4L610.5,233.2L608.5,229.7L600.4,228.6L597.0,225.1L592.6,223.8L586.0,222.9L579.1,228.1L577.5,224.1L584.6,222.2L570.4,216.9L564.6,210.8L559.4,211.0L553.2,207.5L550.3,209.7L554.9,210.1L558.3,213.7L551.6,216.5L535.5,214.6L533.6,218.6L526.5,216.9L506.2,217.3L500.6,215.9L497.0,219.2L494.6,217.9L484.4,213.8L478.1,208.4L477.1,206.1L483.7,206.3L474.9,203.2L474.4,197.6L475.3,192.3L474.3,184.1L476.3,184.6L477.0,177.9L484.5,171.2L491.0,169.1L501.3,168.9L502.7,170.8L496.6,176.1L493.5,182.8L497.4,188.1L499.7,195.8L504.8,199.2L509.9,201.9L511.6,199.2L509.8,196.6L506.1,197.1L503.2,194.2L503.3,191.8L506.1,189.4L512.6,191.9L509.8,181.9L516.0,168.8L524.5,168.3L527.1,170.5L528.8,174.3L533.2,178.1L536.5,180.4L536.1,185.2L538.2,189.3L542.4,185.0L546.9,185.4L547.7,186.0L554.9,184.9L558.5,177.8L561.1,172.7L573.8,182.3L579.5,184.0L580.7,187.2L585.4,187.3L584.1,191.1L589.8,191.9L591.8,187.7L600.4,188.3L605.1,190.8L599.7,195.8L604.9,195.6L605.9,195.8L608.2,192.4L611.1,194.2L608.8,199.8L610.1,205.1L615.6,194.2L618.5,195.2L628.2,196.0L628.7,198.7L622.7,201.4L619.1,206.0L628.2,200.9L629.0,201.6L625.2,206.6L632.3,201.3L632.0,198.7L640.3,202.1L642.5,204.6L637.5,211.0L631.4,211.5L638.7,212.2L642.6,213.6L640.8,214.8L644.0,216.7L633.7,217.9L642.6,218.2L652.9,219.6L657.3,223.8L658.9,220.4L660.6,224.0L671.8,221.5L675.9,223.4L682.2,225.4L682.6,228.1L683.2,229.4L684.7,226.9L690.3,227.4L693.4,229.0L699.0,231.9L700.7,228.3L707.0,230.6L708.0,234.3L700.9,237.8L707.0,239.1L705.5,243.9L700.1,245.5L702.0,250.3L702.7,254.1L695.3,253.3L692.5,251.0L693.2,253.8L682.0,248.8L680.5,245.3L677.0,246.4L665.4,241.3L664.8,244.2L659.6,248.1L654.5,247.5L659.6,251.7L663.1,252.9L667.3,253.9L673.8,257.5L687.2,259.2L687.7,261.4L692.6,261.2L690.4,263.9L696.0,265.9L700.0,266.3L701.3,267.0L703.8,268.0L707.6,272.6L702.7,268.9L699.2,268.5Z"/>
+<path data-id="nt" data-country="ca" class="prov" style="fill:#e84040" d="M373.8,337.8L297.6,332.9L203.7,321.3L168.6,315.3L165.3,306.6L167.3,303.6L159.7,304.3L155.2,302.1L145.7,301.6L147.8,293.8L142.1,289.9L140.1,284.2L135.0,283.1L137.3,279.2L134.9,274.1L137.7,272.0L135.2,268.4L138.9,267.3L138.9,263.4L135.0,260.2L135.1,254.5L129.3,253.7L131.6,252.4L130.0,249.8L126.5,248.0L130.4,245.6L128.4,243.6L135.9,239.9L135.0,236.4L136.5,234.4L129.2,233.6L129.2,228.9L133.0,226.5L133.3,221.0L117.9,216.7L121.5,212.7L122.2,208.2L133.0,195.1L135.4,196.1L138.2,199.7L140.7,191.8L149.4,191.5L151.3,192.7L154.8,189.9L156.6,194.8L162.7,197.8L172.0,193.6L176.6,192.1L183.3,191.2L187.9,193.1L190.9,191.2L176.5,196.4L162.7,197.8L153.6,201.5L157.8,203.3L167.8,199.1L174.1,200.9L181.8,196.8L191.4,196.9L198.0,196.6L202.2,193.4L203.4,188.9L208.1,195.2L207.7,201.6L210.5,206.8L213.6,208.7L219.3,204.2L221.3,200.9L226.4,200.1L223.0,205.2L226.4,210.6L230.8,209.6L234.6,205.8L244.9,208.6L249.1,212.0L240.4,230.3L240.5,230.6L293.4,268.4L308.3,269.9L316.0,277.4L318.7,279.1L324.6,280.4L379.2,289.7L373.8,337.8Z"/>
+<path data-id="ab" data-country="ca" class="prov" style="fill:#e8a730" d="M203.7,321.3L297.6,332.9L266.4,450.3L264.9,450.2L236.7,447.4L219.0,445.4L213.4,438.4L215.4,436.5L215.9,430.4L207.9,424.0L200.2,412.6L197.0,413.1L194.8,408.0L191.7,407.9L188.6,403.6L185.9,404.5L186.2,401.1L183.4,395.8L178.4,394.2L174.2,391.2L173.7,386.1L203.7,321.3Z"/>
+<path data-id="ma" data-country="us" class="prov" style="fill:#e86020" d="M756.4,507.8L752.3,504.9L747.1,505.7L734.7,507.4L725.4,508.6L725.0,508.4L725.2,501.3L729.6,500.6L735.3,499.9L750.1,497.8L755.4,495.1L759.4,497.0L755.3,501.2L759.8,501.5L764.1,505.1L772.4,505.2L762.3,509.2L763.0,506.3L758.1,509.3L757.2,507.8L756.4,507.8Z"/>
+<path data-id="vt" data-country="us" class="prov" style="fill:#e84040" d="M729.6,500.6L725.2,501.3L721.8,493.1L719.4,493.1L717.2,488.5L717.2,484.0L714.2,478.7L722.1,477.5L736.7,475.1L737.2,481.2L733.5,483.5L732.6,491.7L733.5,498.6L735.3,499.9L729.6,500.6Z"/>
+<path data-id="mn" data-country="us" class="prov" style="fill:#7ecf50" d="M508.4,466.7L497.4,470.0L491.9,472.5L479.0,480.4L476.9,481.6L477.3,487.7L472.3,489.5L470.3,493.1L473.1,494.4L471.7,501.5L481.0,504.7L486.9,508.3L491.6,509.8L492.7,514.1L471.7,514.6L425.4,515.0L425.7,496.4L420.6,493.2L424.4,489.7L424.0,485.7L421.6,482.4L421.0,473.5L417.8,466.3L418.3,461.3L416.8,457.7L441.1,457.8L441.2,453.8L445.2,454.6L446.7,459.7L458.1,462.6L463.9,461.3L471.3,462.1L474.6,465.3L478.7,464.1L486.3,467.0L492.2,464.8L493.9,466.1L501.2,465.7L508.4,466.7Z"/>
+<path data-id="wa" data-country="us" class="prov" style="fill:#2ecf7a" d="M99.7,458.0L91.8,455.9L90.2,454.3L94.3,450.8L92.3,448.9L93.6,439.8L92.4,434.8L95.3,433.2L100.3,436.2L114.7,439.3L116.3,442.1L113.9,445.1L115.5,447.7L110.1,446.8L106.4,448.9L110.8,449.7L115.9,447.7L118.6,442.0L115.5,438.2L117.5,436.9L112.3,434.7L119.3,433.3L119.3,430.8L120.5,431.0L184.6,441.1L173.8,467.6L174.3,471.7L148.6,468.0L141.3,467.8L132.6,468.4L120.8,467.6L113.9,465.5L107.4,466.1L102.2,464.1L102.5,459.3L99.7,458.0Z"/>
+<path data-id="id" data-country="us" class="prov" style="fill:#7ecf50" d="M184.6,441.1L196.1,442.6L192.1,452.7L194.8,456.3L193.8,459.0L197.7,461.3L204.6,468.8L207.2,468.7L204.6,472.8L204.0,476.7L201.1,479.8L203.4,481.0L208.7,479.4L213.4,489.5L216.4,493.3L224.4,494.0L226.2,493.3L235.4,494.0L238.3,492.7L240.8,495.4L235.8,513.0L233.6,521.0L216.5,519.3L194.7,516.8L182.7,515.3L156.4,511.9L163.5,493.9L166.7,490.1L163.4,488.4L164.1,486.6L170.4,482.8L177.6,476.7L174.3,471.7L173.8,467.6L184.6,441.1Z"/>
+<path data-id="ar" data-country="us" class="prov" style="fill:#e86020" d="M460.6,623.3L460.3,617.6L453.8,616.8L453.9,598.8L451.1,587.2L514.6,585.8L516.2,587.9L512.2,591.2L521.5,590.7L516.7,597.3L514.2,601.4L510.4,605.2L510.6,607.4L503.9,612.1L502.1,615.4L503.8,617.5L503.6,622.3L500.7,622.4L460.6,623.3Z"/>
+<path data-id="tx" data-country="us" class="prov" style="fill:#7ecf50" d="M453.8,616.8L460.3,617.6L460.6,623.3L461.0,633.8L469.5,643.6L466.3,648.6L465.5,654.7L461.7,657.9L452.4,660.4L446.6,659.5L437.6,667.7L432.1,668.5L416.4,675.8L409.0,683.7L409.7,688.7L412.7,697.0L408.1,698.1L401.9,695.9L395.1,695.7L385.9,692.4L381.2,691.9L380.3,688.6L375.6,684.9L375.1,679.5L372.2,678.6L363.3,671.6L358.0,662.9L347.1,655.6L336.2,655.0L333.0,653.9L327.2,655.2L318.9,662.8L305.2,658.4L298.4,654.6L296.9,649.0L292.7,643.7L287.6,641.6L272.1,630.9L270.1,628.4L324.4,631.5L330.9,585.2L331.5,585.1L374.2,586.6L372.8,606.5L377.3,608.5L383.4,608.5L384.3,610.3L394.7,612.1L400.6,611.6L402.4,614.1L406.6,613.2L414.9,616.0L417.8,613.6L426.5,616.3L432.3,614.3L442.8,613.6L453.8,616.8Z"/>
+<path data-id="ri" data-country="us" class="prov" style="fill:#e86020" d="M747.1,505.7L752.3,504.9L755.6,507.6L756.7,509.8L749.7,512.8L749.4,510.6L747.1,505.7Z"/>
+<path data-id="fl" data-country="us" class="prov" style="fill:#e8a730" d="M563.7,646.1L560.2,640.8L599.6,638.4L602.3,641.1L642.9,639.5L646.3,641.2L647.2,636.5L653.8,636.9L660.6,646.6L667.4,653.0L675.3,658.5L676.6,663.3L687.0,673.3L689.4,684.6L686.4,693.8L676.5,694.2L671.6,688.5L663.5,686.8L660.5,681.9L656.3,682.2L655.8,677.5L651.7,678.0L644.6,672.5L647.9,668.4L641.1,668.8L641.4,657.5L637.9,654.6L634.5,654.9L622.4,648.0L616.8,646.5L611.3,647.7L603.2,652.7L591.3,648.2L577.8,646.1L562.4,648.3L563.7,646.1Z"/>
+<path data-id="ms" data-country="us" class="prov" style="fill:#e86020" d="M548.7,647.9L534.6,648.6L531.6,650.6L526.2,645.7L527.4,642.4L498.0,643.4L497.9,640.6L502.1,634.3L508.0,629.2L505.3,628.1L503.6,622.3L503.8,617.5L502.1,615.4L503.9,612.1L510.6,607.4L510.4,605.2L514.2,601.4L538.8,600.3L545.1,600.0L546.6,601.0L545.2,632.3L548.7,647.9Z"/>
+<path data-id="ut" data-country="us" class="prov" style="fill:#e8a730" d="M233.6,521.0L230.6,531.2L257.2,533.6L255.6,539.9L247.1,574.4L223.0,572.2L177.3,567.4L184.9,545.3L194.7,516.8L216.5,519.3L233.6,521.0Z"/>
+<path data-id="nc" data-country="us" class="prov" style="fill:#7ecf50" d="M618.3,595.1L613.0,595.6L601.0,596.6L601.3,593.8L607.6,590.2L611.4,589.7L622.7,583.7L630.3,582.6L634.9,576.8L657.2,575.4L713.8,568.6L719.2,572.9L706.5,576.0L718.6,574.0L721.0,575.3L717.9,580.5L710.3,580.2L711.9,584.0L707.0,586.1L715.9,585.8L712.5,588.5L705.3,589.5L698.7,593.5L696.2,599.4L687.4,600.0L668.8,592.5L652.5,593.8L647.3,590.9L629.8,591.9L618.3,595.1Z"/>
+<path data-id="ga" data-country="us" class="prov" style="fill:#7ecf50" d="M601.0,596.6L613.0,595.6L618.3,595.1L615.6,598.4L623.5,600.3L628.9,605.0L639.5,609.2L643.0,612.2L647.0,613.1L649.8,617.2L653.2,618.3L656.2,622.3L659.1,622.5L653.9,628.2L655.6,630.8L653.1,631.9L653.8,636.9L647.2,636.5L646.3,641.2L642.9,639.5L602.3,641.1L599.6,638.4L595.9,630.0L598.5,625.1L592.6,618.5L582.5,598.0L593.0,597.2L601.0,596.6Z"/>
+<path data-id="va" data-country="us" class="prov" style="fill:#2ecf7a" d="M716.0,568.3L714.3,566.9L657.2,575.4L634.9,576.8L630.8,577.4L606.5,579.3L613.7,577.2L619.7,572.4L628.1,567.7L630.7,570.1L639.2,569.8L651.4,565.8L655.9,557.3L657.1,553.9L662.2,555.1L665.0,550.3L671.7,546.2L679.7,545.5L680.3,543.5L683.9,544.9L690.0,546.4L688.9,552.2L692.4,551.8L696.0,553.7L699.8,553.5L705.8,555.4L705.8,558.3L707.5,560.0L708.5,564.4L713.0,564.9L716.3,568.3L716.0,568.3Z"/>
+<path data-id="tn" data-country="us" class="prov" style="fill:#2ecf7a" d="M606.5,579.3L630.8,577.4L634.9,576.8L630.3,582.6L622.7,583.7L611.4,589.7L607.6,590.2L601.3,593.8L601.0,596.6L593.0,597.2L582.5,598.0L545.0,599.9L545.1,600.0L538.8,600.3L514.2,601.4L516.7,597.3L521.5,590.7L521.6,588.2L523.2,585.4L524.1,585.4L524.5,585.9L525.1,585.4L544.8,584.5L547.5,582.8L565.7,581.7L605.7,579.6L606.5,579.3Z"/>
+<path data-id="ia" data-country="us" class="prov" style="fill:#2ecf7a" d="M434.5,545.1L433.1,537.7L430.2,535.2L430.6,532.7L425.0,525.2L423.1,522.8L425.4,518.9L423.6,515.0L425.4,515.0L471.7,514.6L492.7,514.1L496.1,521.8L501.5,524.0L508.1,527.9L506.4,533.2L498.0,535.4L498.8,540.3L493.0,546.4L488.8,544.1L451.9,545.2L434.5,545.1Z"/>
+<path data-id="md" data-country="us" class="prov" style="fill:#e8a730" d="M690.0,546.4L683.9,544.9L680.3,543.5L677.8,540.8L673.6,540.3L669.8,542.5L665.2,542.0L657.1,547.4L655.6,542.1L678.7,539.5L704.9,536.2L711.1,548.8L719.4,547.7L719.3,550.0L717.1,552.7L713.9,553.3L713.7,553.7L711.1,552.0L702.6,549.8L706.3,548.3L701.6,546.8L704.0,545.3L700.7,542.9L703.4,537.7L698.8,542.1L698.1,545.9L699.8,549.6L703.8,553.1L696.3,552.8L693.7,552.2L692.4,551.8L689.6,551.2L691.8,547.6L693.1,546.5L690.0,546.4Z"/>
+<path data-id="de" data-country="us" class="prov" style="fill:#e86020" d="M711.1,548.8L704.9,536.2L706.9,534.8L709.4,534.8L707.8,537.0L712.8,542.3L718.0,544.3L720.0,547.6L719.7,547.7L719.4,547.7L711.1,548.8Z"/>
+<path data-id="mo" data-country="us" class="prov" style="fill:#e8a730" d="M440.7,551.2L436.3,547.6L434.5,545.1L451.9,545.2L488.8,544.1L493.0,546.4L492.1,548.6L494.7,553.3L502.4,557.1L506.1,561.5L512.4,561.8L509.6,567.3L513.7,570.1L521.8,573.1L522.7,577.6L528.8,580.3L528.9,582.8L525.1,585.4L524.5,585.9L524.1,585.4L523.0,584.9L521.6,588.2L521.5,590.7L512.2,591.2L516.2,587.9L514.6,585.8L451.1,587.2L451.0,583.4L451.0,582.1L450.4,560.2L443.7,556.1L446.6,553.0L440.7,551.2Z"/>
+<path data-id="pa" data-country="us" class="prov" style="fill:#7ecf50" d="M708.5,522.4L710.9,526.6L717.2,529.9L713.9,531.9L712.7,533.3L710.5,534.2L709.4,534.8L706.9,534.8L704.9,536.2L678.7,539.5L655.6,542.1L641.6,543.6L638.8,534.2L634.8,520.6L636.5,520.0L643.8,516.7L644.6,519.4L701.8,512.6L706.9,515.9L712.7,517.9L708.5,522.4Z"/>
+<path data-id="nj" data-country="us" class="prov" style="fill:#e8a730" d="M708.5,522.4L712.7,517.9L718.6,519.0L724.5,520.0L721.7,525.8L726.4,526.8L727.2,533.1L720.2,542.4L709.3,538.2L709.3,535.1L710.5,534.2L713.9,531.9L717.2,529.9L710.9,526.6L708.5,522.4Z"/>
+<path data-id="ny" data-country="us" class="prov" style="fill:#e84040" d="M712.7,517.9L706.9,515.9L701.8,512.6L644.6,519.4L643.8,516.7L650.7,512.6L653.4,509.6L652.2,508.6L650.1,507.2L649.6,505.4L661.3,502.9L669.0,503.4L679.1,501.3L684.8,498.0L680.6,492.7L686.2,488.1L691.2,483.5L697.5,481.2L714.2,478.7L717.2,484.0L717.2,488.5L719.4,493.1L721.8,493.1L725.2,501.3L725.0,508.4L725.4,508.6L727.9,516.3L727.9,519.5L724.3,522.6L724.5,520.0L718.6,519.0L714.2,518.1L712.7,517.9Z"/>
+<path data-id="la" data-country="us" class="prov" style="fill:#e8a730" d="M460.6,623.3L500.7,622.4L503.6,622.3L505.3,628.1L508.0,629.2L502.1,634.3L497.9,640.6L498.0,643.4L527.4,642.4L526.2,645.7L531.6,650.6L520.7,649.1L517.6,651.7L523.9,652.6L529.9,651.2L535.1,653.4L529.3,656.6L532.4,658.9L540.6,660.5L539.0,662.3L528.2,660.0L524.6,661.2L522.1,662.6L517.6,660.5L511.7,662.5L504.6,661.0L505.4,658.9L501.2,658.6L496.0,655.7L492.1,657.9L496.4,659.3L483.1,658.3L474.9,656.7L465.2,657.7L465.5,654.7L466.3,648.6L469.5,643.6L461.0,633.8L460.6,623.3Z"/>
+<path data-id="nh" data-country="us" class="prov" style="fill:#e86020" d="M750.3,488.5L755.3,492.9L755.8,493.0L755.4,495.1L750.1,497.8L735.3,499.9L733.5,498.6L732.6,491.7L733.5,483.5L737.2,481.2L736.7,475.1L737.4,472.0L740.3,471.4L750.3,488.5Z"/>
+<path data-id="me" data-country="us" class="prov" style="fill:#e86020" d="M750.3,488.5L740.3,471.4L742.8,471.6L743.8,467.9L746.4,465.8L746.3,455.2L751.2,446.4L754.4,447.4L756.7,448.1L764.1,445.1L770.4,447.3L777.2,460.0L779.9,461.1L782.5,460.7L783.9,463.9L788.0,464.3L793.0,467.1L790.7,469.6L780.6,473.4L778.4,476.9L776.6,473.9L775.1,476.3L770.3,475.8L771.1,479.7L763.6,484.8L761.3,483.6L755.3,492.9L750.3,488.5Z"/>
+<path data-id="sd" data-country="us" class="prov" style="fill:#e86020" d="M424.4,489.7L420.6,493.2L425.7,496.4L425.4,515.0L423.6,515.0L425.4,518.9L423.1,522.8L425.0,525.2L414.4,521.3L404.2,522.1L399.0,520.0L326.8,517.5L327.3,513.6L329.8,496.8L330.1,496.8L331.4,487.1L410.0,489.5L424.4,489.7Z"/>
+<path data-id="ct" data-country="us" class="prov" style="fill:#e86020" d="M749.7,512.8L736.5,515.6L727.9,519.5L727.9,516.3L725.4,508.6L734.7,507.4L747.1,505.7L749.4,510.6L749.7,512.8Z"/>
+<path data-id="il" data-country="us" class="prov" style="fill:#7ecf50" d="M538.6,522.6L538.8,524.8L543.6,530.3L547.3,554.7L545.9,557.3L548.6,560.8L542.5,568.0L542.7,571.0L542.2,574.5L537.4,575.4L537.6,578.9L531.5,577.6L528.8,580.3L522.7,577.6L521.8,573.1L513.7,570.1L509.6,567.3L512.4,561.8L506.1,561.5L502.4,557.1L494.7,553.3L492.1,548.6L493.0,546.4L498.8,540.3L498.0,535.4L506.4,533.2L508.1,527.9L501.5,524.0L520.1,523.4L538.6,522.6Z"/>
+<path data-id="in" data-country="us" class="prov" style="fill:#7ecf50" d="M543.6,530.3L546.8,531.2L552.5,529.5L579.3,527.7L579.4,528.3L580.4,532.5L584.9,555.0L585.5,558.2L577.0,559.4L577.7,561.3L572.8,564.2L570.2,567.7L566.7,566.1L560.8,569.0L555.0,569.9L544.8,569.7L542.7,571.0L542.5,568.0L548.6,560.8L545.9,557.3L547.3,554.7L543.6,530.3Z"/>
+<path data-id="ky" data-country="us" class="prov" style="fill:#e8a730" d="M525.1,585.4L528.9,582.8L528.8,580.3L531.5,577.6L537.6,578.9L537.4,575.4L542.2,574.5L542.7,571.0L544.8,569.7L555.0,569.9L560.8,569.0L566.7,566.1L570.2,567.7L572.8,564.2L577.7,561.3L577.0,559.4L585.5,558.2L584.9,555.0L590.0,554.6L594.0,557.3L606.8,558.5L612.2,556.5L617.1,559.5L617.2,562.3L623.0,566.6L628.1,567.7L619.7,572.4L613.7,577.2L606.5,579.3L605.7,579.6L565.7,581.7L547.5,582.8L544.8,584.5L525.1,585.4Z"/>
+<path data-id="wv" data-country="us" class="prov" style="fill:#e8a730" d="M617.1,559.5L620.6,559.0L622.8,552.9L625.3,554.0L629.6,548.2L633.0,547.8L637.1,545.1L638.8,534.2L641.6,543.6L655.6,542.1L657.1,547.4L665.2,542.0L669.8,542.5L673.6,540.3L677.8,540.8L680.3,543.5L679.7,545.5L672.0,543.2L671.7,546.2L666.7,550.8L665.0,550.3L662.2,555.1L657.1,553.9L655.9,557.3L650.9,564.0L651.4,565.8L639.2,569.8L630.7,570.1L628.1,567.7L623.0,566.6L617.2,562.3L617.1,559.5Z"/>
+<path data-id="on" data-country="ca" class="prov" style="fill:#7ecf50" d="M701.1,478.3L699.4,479.9L697.5,481.2L691.2,483.5L686.2,488.1L681.5,491.0L676.7,492.1L672.7,495.4L665.4,495.5L647.4,499.9L643.1,502.2L640.3,505.9L646.4,506.7L649.6,505.4L650.0,506.5L650.0,507.2L650.1,507.2L652.3,508.6L636.6,511.9L633.1,514.5L622.0,514.9L616.8,519.3L607.2,522.6L600.6,522.8L600.6,520.7L608.8,519.3L605.6,517.3L607.1,516.3L607.3,512.4L615.2,507.8L613.0,500.6L617.4,494.7L615.5,491.0L610.4,488.5L615.3,488.1L616.5,490.7L620.4,490.6L621.8,494.4L623.6,492.9L632.4,494.6L636.3,490.9L630.5,487.9L626.9,485.6L620.0,480.6L615.1,481.0L608.8,479.5L592.0,480.5L577.9,479.9L577.4,478.0L572.9,479.1L571.2,474.7L568.3,473.8L569.9,470.4L564.0,467.4L564.3,463.7L554.5,464.6L550.1,462.7L544.8,456.6L534.6,457.2L522.7,455.5L519.7,460.9L516.8,460.2L512.3,461.7L511.3,465.2L508.4,466.7L501.2,465.7L493.9,466.1L492.2,464.8L486.3,467.0L478.7,464.1L474.6,465.3L471.3,462.1L463.9,461.3L458.1,462.6L446.7,459.7L445.2,454.6L441.2,453.8L440.7,417.2L456.0,408.0L480.2,389.7L503.6,372.1L514.1,376.0L518.9,380.2L539.3,383.7L542.4,385.5L551.5,386.8L558.5,385.4L561.5,386.0L576.6,386.1L577.9,389.1L577.1,395.8L581.6,399.9L583.1,405.6L582.0,409.0L591.6,413.7L594.8,417.2L599.3,417.8L604.5,420.5L607.4,424.0L611.2,424.3L618.9,427.3L629.9,462.2L632.5,467.0L639.9,472.1L643.9,473.7L656.9,473.8L666.8,476.8L668.5,475.7L671.5,478.5L681.6,479.1L688.2,476.3L695.7,474.4L699.1,474.8L701.1,478.3Z"/>
+<path data-id="qc" data-country="ca" class="prov" style="fill:#7ecf50" d="M760.2,349.7L764.2,354.2L768.4,353.6L767.5,356.0L769.0,359.4L767.3,361.4L765.7,363.2L753.7,362.0L749.1,365.6L746.6,364.1L736.1,362.5L738.9,367.4L729.6,365.6L735.1,368.3L734.6,371.2L731.7,370.5L730.1,372.7L732.6,374.9L731.7,376.8L739.3,380.7L744.7,381.4L745.5,384.9L741.3,385.5L743.5,387.7L749.3,388.9L751.8,384.2L757.4,391.6L762.0,393.2L767.0,391.8L772.3,394.3L776.7,393.5L780.4,394.7L782.2,392.6L777.9,382.4L782.6,380.7L785.6,381.3L779.7,384.9L783.8,385.5L786.3,388.8L855.1,372.2L859.5,377.8L853.0,378.8L848.0,381.9L843.2,386.8L844.5,388.5L841.2,391.2L836.3,397.6L828.5,399.0L820.1,402.8L796.0,405.7L791.6,407.2L780.3,408.9L772.0,412.1L768.0,412.1L762.5,418.0L762.5,423.4L755.2,425.3L754.7,427.3L750.4,428.8L746.6,432.8L744.7,438.1L742.2,440.5L739.6,447.8L737.0,448.7L736.0,452.5L730.5,457.3L738.6,453.2L742.2,447.6L749.5,438.0L757.0,432.2L772.2,423.9L783.2,420.2L795.5,419.5L801.8,421.9L801.8,425.8L792.2,432.4L785.6,431.2L784.0,433.0L776.1,435.6L770.4,438.1L767.3,437.3L758.9,439.7L760.8,443.4L754.4,447.4L751.2,446.4L746.3,455.2L746.4,465.8L743.8,467.9L742.8,471.6L740.3,471.4L737.4,472.0L736.7,475.1L722.1,477.5L714.2,478.7L697.7,481.2L707.4,475.5L701.1,478.3L699.1,474.8L695.7,474.4L688.2,476.3L681.6,479.1L671.5,478.5L668.5,475.7L666.8,476.8L656.9,473.8L643.9,473.7L639.9,472.1L632.5,467.0L629.9,462.2L618.9,427.3L617.6,422.9L617.2,421.8L618.6,419.6L623.0,421.3L624.7,423.5L621.5,418.0L625.4,414.0L625.5,411.3L617.9,404.8L617.1,401.1L614.8,399.9L614.6,394.4L609.7,393.0L604.2,388.6L617.2,383.0L622.7,379.7L628.1,374.6L631.2,369.7L629.9,362.0L627.1,356.9L619.6,350.1L613.2,347.3L608.7,346.6L602.3,344.1L601.8,341.6L607.3,336.5L606.0,332.2L610.4,330.4L610.1,328.1L603.7,324.0L605.1,322.5L598.1,319.6L600.5,316.8L599.4,312.7L601.4,312.1L595.0,308.2L592.8,303.7L597.6,299.7L602.3,299.6L615.7,301.2L617.9,300.3L623.6,301.4L631.7,296.4L638.6,298.8L642.8,299.0L648.5,301.0L653.8,302.8L658.9,307.9L667.7,307.9L673.4,309.1L675.7,305.9L678.6,308.7L679.9,315.2L682.2,319.0L684.7,325.0L688.6,325.1L686.4,326.8L688.5,329.2L684.8,331.1L686.9,332.9L690.3,328.8L694.6,327.8L699.4,328.5L702.4,330.7L709.1,331.0L714.4,329.0L716.7,328.0L717.5,324.2L720.5,324.5L723.0,320.5L720.9,318.7L724.3,317.9L719.7,313.4L722.6,310.0L722.0,305.5L725.3,305.5L725.6,307.5L726.8,314.0L731.4,313.4L731.9,316.2L735.0,319.1L739.0,321.0L742.0,318.9L744.7,320.1L740.5,321.5L743.7,323.1L740.3,327.4L746.2,331.0L750.3,331.4L753.6,339.7L752.4,342.3L756.4,344.2L753.9,344.9L757.5,348.4L763.3,347.8L760.2,349.7Z"/>
+<path data-id="nb" data-country="ca" class="prov" style="fill:#e8a730" d="M818.5,450.9L815.1,450.9L814.1,454.1L803.0,461.0L792.1,464.8L788.0,464.3L783.9,463.9L782.5,460.7L779.2,460.6L777.2,460.0L770.4,447.3L764.1,445.1L756.7,448.1L754.4,447.4L760.8,443.4L758.9,439.7L767.3,437.3L770.4,438.1L776.1,435.6L781.4,433.9L788.3,434.2L791.8,436.1L795.8,433.7L802.3,432.7L800.5,439.5L804.5,439.9L804.8,442.1L813.3,447.6L822.6,446.9L820.2,448.8L819.1,449.3L818.5,450.9Z"/>
+<path data-id="ns" data-country="ca" class="prov" style="fill:#e8a730" d="M818.5,450.9L819.1,449.3L820.2,448.8L832.4,448.1L841.0,448.4L845.5,444.3L847.1,446.0L852.1,445.1L854.2,445.6L848.9,441.8L851.3,436.6L853.0,429.7L855.6,429.2L858.7,433.0L857.5,441.9L860.6,443.0L862.3,439.1L858.3,440.6L861.4,435.6L867.9,435.8L869.4,437.3L864.8,442.5L859.4,445.4L860.0,447.2L859.3,448.7L852.8,450.7L850.0,453.5L840.0,459.1L833.8,460.6L835.4,462.3L825.9,463.4L827.1,466.1L823.9,471.9L819.1,475.7L815.1,477.3L810.9,474.7L808.9,475.9L805.8,472.8L805.5,467.4L815.8,459.2L820.8,456.1L821.8,458.2L829.2,453.5L813.5,456.4L818.5,450.9Z"/>
+<path data-id="nl" data-country="ca" class="prov" style="fill:#e86020" d="M769.0,359.4L767.5,356.0L768.4,353.6L764.2,354.2L762.7,350.9L760.2,349.7L763.3,347.8L757.5,348.4L753.9,344.9L756.4,344.2L752.4,342.3L753.6,339.7L750.3,331.4L746.2,331.0L740.3,327.4L743.7,323.1L740.5,321.5L744.7,320.1L742.0,318.9L739.0,321.0L735.0,319.1L731.9,316.2L731.4,313.4L726.8,314.0L725.6,307.5L725.4,306.2L730.9,308.1L732.8,311.3L735.9,311.5L743.6,315.9L751.5,319.3L748.9,322.2L755.0,320.4L756.5,324.0L758.6,323.6L764.6,326.2L766.9,328.4L770.7,328.6L768.8,332.0L775.8,332.0L777.0,335.7L779.2,337.0L773.1,336.3L774.0,338.4L782.1,338.4L774.3,339.5L776.7,342.4L785.1,341.0L787.6,344.1L795.5,343.3L799.1,346.5L800.7,347.7L803.9,346.3L805.2,348.6L812.4,346.2L815.7,349.0L827.0,347.5L834.4,348.3L831.5,350.6L824.6,356.1L817.6,360.5L812.0,362.7L813.3,368.0L816.1,364.8L822.9,360.5L829.1,354.4L835.3,351.8L841.7,355.4L838.6,357.5L847.7,353.2L857.1,354.3L860.0,357.4L858.0,359.6L863.9,362.3L860.0,364.6L866.4,363.9L868.7,367.2L867.6,369.7L859.5,377.8L855.1,372.2L786.3,388.8L783.8,385.5L779.7,384.9L785.6,381.3L782.6,380.7L777.9,382.4L782.2,392.6L780.4,394.7L776.7,393.5L772.3,394.3L767.0,391.8L762.0,393.2L757.4,391.6L751.8,384.2L749.3,388.9L743.5,387.7L741.3,385.5L745.5,384.9L744.7,381.4L739.3,380.7L731.7,376.8L732.6,374.9L730.1,372.7L731.7,370.5L734.6,371.2L735.1,368.3L729.6,365.6L738.9,367.4L736.1,362.5L746.6,364.1L749.1,365.6L753.7,362.0L765.7,363.2L769.5,362.3L767.3,361.4L769.0,359.4Z"/>
+<path data-id="mb" data-country="ca" class="prov" style="fill:#7ecf50" d="M367.9,456.7L368.6,383.8L373.8,337.8L438.5,338.9L442.8,338.9L443.7,346.2L443.0,349.8L446.8,353.1L449.1,352.1L459.4,352.7L459.7,355.0L463.3,360.0L467.7,367.8L465.1,372.3L481.9,368.4L486.4,368.6L494.4,371.1L503.6,372.1L480.2,389.7L456.0,408.0L440.7,417.2L441.2,453.8L441.1,457.8L416.8,457.7L415.1,457.7L367.9,456.7Z"/>
+<path data-id="sc" data-country="us" class="prov" style="fill:#e8a730" d="M687.4,600.0L682.9,603.1L680.8,608.1L670.7,615.2L666.1,617.0L659.1,622.5L656.2,622.3L653.2,618.3L649.8,617.2L647.0,613.1L643.0,612.2L639.5,609.2L628.9,605.0L623.5,600.3L615.6,598.4L618.3,595.1L629.8,591.9L647.3,590.9L652.5,593.8L668.8,592.5L687.4,600.0Z"/>
+<path data-id="yt" data-country="ca" class="prov" style="fill:#e84040" d="M133.0,195.1L122.2,208.2L121.5,212.7L117.9,216.7L133.3,221.0L133.0,226.5L129.2,228.9L129.2,233.6L136.5,234.4L135.0,236.4L135.9,239.9L128.4,243.6L130.4,245.6L126.5,248.0L130.0,249.8L131.6,252.4L129.3,253.7L135.1,254.5L135.0,260.2L138.9,263.4L138.9,267.3L135.2,268.4L137.7,272.0L134.9,274.1L137.3,279.2L135.0,283.1L140.1,284.2L142.1,289.9L147.8,293.8L145.7,301.6L153.6,302.9L155.2,302.1L159.7,304.3L167.3,303.6L165.3,306.6L168.6,315.3L33.6,282.9L33.5,282.8L36.2,279.3L31.6,278.0L27.0,278.5L20.0,274.6L109.5,177.8L116.3,180.3L120.4,183.1L123.8,189.3L128.2,193.2L133.0,195.1Z"/>
+<path data-id="pe" data-country="ca" class="prov" style="fill:#e84040" d="M827.0,442.7L841.2,439.0L837.5,440.9L837.8,445.2L834.3,445.9L831.7,444.0L823.6,445.5L821.4,444.1L816.7,444.9L815.4,443.0L811.7,443.0L814.2,438.1L814.8,441.2L821.4,443.4L821.4,442.2L827.0,442.7Z"/>
+<text data-label="ca" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="89.9" y="578.7" text-anchor="middle" dominant-baseline="middle">CA</text>
+<text data-label="or" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="118.1" y="471.7" text-anchor="middle" dominant-baseline="middle">OR</text>
+<text data-label="nd" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="380" y="470" text-anchor="middle" dominant-baseline="middle">ND</text>
+<text data-label="sk" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="330" y="395" text-anchor="middle" dominant-baseline="middle">SK</text>
+<text data-label="mt" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="255" y="470" text-anchor="middle" dominant-baseline="middle">MT</text>
+<text data-label="az" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="185" y="600" text-anchor="middle" dominant-baseline="middle">AZ</text>
+<text data-label="nv" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="150" y="545" text-anchor="middle" dominant-baseline="middle">NV</text>
+<text data-label="al" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="565" y="625" text-anchor="middle" dominant-baseline="middle">AL</text>
+<text data-label="nm" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="280" y="608" text-anchor="middle" dominant-baseline="middle">NM</text>
+<text data-label="co" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="300" y="558" text-anchor="middle" dominant-baseline="middle">CO</text>
+<text data-label="wy" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="285" y="515" text-anchor="middle" dominant-baseline="middle">WY</text>
+<text data-label="wi" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="505" y="500" text-anchor="middle" dominant-baseline="middle">WI</text>
+<text data-label="ks" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="400" y="565" text-anchor="middle" dominant-baseline="middle">KS</text>
+<text data-label="ne" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="390" y="535" text-anchor="middle" dominant-baseline="middle">NE</text>
+<text data-label="ok" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="415" y="600" text-anchor="middle" dominant-baseline="middle">OK</text>
+<text data-label="mi" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="565" y="495" text-anchor="middle" dominant-baseline="middle">MI</text>
+<text data-label="oh" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="610" y="540" text-anchor="middle" dominant-baseline="middle">OH</text>
+<text data-label="bc" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="120" y="375" text-anchor="middle" dominant-baseline="middle">BC</text>
+<text data-label="nu" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="560" y="220" text-anchor="middle" dominant-baseline="middle">NU</text>
+<text data-label="nt" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="255" y="250" text-anchor="middle" dominant-baseline="middle">NT</text>
+<text data-label="ab" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="235" y="385" text-anchor="middle" dominant-baseline="middle">AB</text>
+<text data-label="ma" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="800" y="510" text-anchor="middle" dominant-baseline="middle">MA</text>
+<text data-label="vt" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="775" y="490" text-anchor="middle" dominant-baseline="middle">VT</text>
+<text data-label="mn" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="460" y="475" text-anchor="middle" dominant-baseline="middle">MN</text>
+<text data-label="wa" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="130" y="450" text-anchor="middle" dominant-baseline="middle">WA</text>
+<text data-label="id" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="195" y="475" text-anchor="middle" dominant-baseline="middle">ID</text>
+<text data-label="ar" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="490" y="607" text-anchor="middle" dominant-baseline="middle">AR</text>
+<text data-label="tx" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="380" y="645" text-anchor="middle" dominant-baseline="middle">TX</text>
+<text data-label="ri" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="800" y="522" text-anchor="middle" dominant-baseline="middle">RI</text>
+<text data-label="fl" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="646" y="660" text-anchor="middle" dominant-baseline="middle">FL</text>
+<text data-label="ms" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="520" y="628" text-anchor="middle" dominant-baseline="middle">MS</text>
+<text data-label="ut" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="215" y="545" text-anchor="middle" dominant-baseline="middle">UT</text>
+<text data-label="nc" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="670" y="585" text-anchor="middle" dominant-baseline="middle">NC</text>
+<text data-label="ga" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="635" y="618" text-anchor="middle" dominant-baseline="middle">GA</text>
+<text data-label="va" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="685" y="558" text-anchor="middle" dominant-baseline="middle">VA</text>
+<text data-label="tn" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="570" y="586" text-anchor="middle" dominant-baseline="middle">TN</text>
+<text data-label="ia" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="470" y="533" text-anchor="middle" dominant-baseline="middle">IA</text>
+<text data-label="md" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="740" y="520" text-anchor="middle" dominant-baseline="middle">MD</text>
+<text data-label="de" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="742" y="530" text-anchor="middle" dominant-baseline="middle">DE</text>
+<text data-label="mo" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="500" y="565" text-anchor="middle" dominant-baseline="middle">MO</text>
+<text data-label="pa" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="675" y="528" text-anchor="middle" dominant-baseline="middle">PA</text>
+<text data-label="nj" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="755" y="525" text-anchor="middle" dominant-baseline="middle">NJ</text>
+<text data-label="ny" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="695" y="505" text-anchor="middle" dominant-baseline="middle">NY</text>
+<text data-label="la" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="500" y="648" text-anchor="middle" dominant-baseline="middle">LA</text>
+<text data-label="nh" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="800" y="500" text-anchor="middle" dominant-baseline="middle">NH</text>
+<text data-label="me" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="770" y="465" text-anchor="middle" dominant-baseline="middle">ME</text>
+<text data-label="sd" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="385" y="505" text-anchor="middle" dominant-baseline="middle">SD</text>
+<text data-label="ct" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="782" y="522" text-anchor="middle" dominant-baseline="middle">CT</text>
+<text data-label="il" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="518" y="555" text-anchor="middle" dominant-baseline="middle">IL</text>
+<text data-label="in" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="558" y="555" text-anchor="middle" dominant-baseline="middle">IN</text>
+<text data-label="ky" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="577" y="572" text-anchor="middle" dominant-baseline="middle">KY</text>
+<text data-label="wv" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="658" y="548" text-anchor="middle" dominant-baseline="middle">WV</text>
+<text data-label="on" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="580" y="460" text-anchor="middle" dominant-baseline="middle">ON</text>
+<text data-label="qc" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="720" y="390" text-anchor="middle" dominant-baseline="middle">QC</text>
+<text data-label="nb" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="808" y="452" text-anchor="middle" dominant-baseline="middle">NB</text>
+<text data-label="ns" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="848" y="458" text-anchor="middle" dominant-baseline="middle">NS</text>
+<text data-label="nl" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="820" y="360" text-anchor="middle" dominant-baseline="middle">NL</text>
+<text data-label="mb" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="435" y="400" text-anchor="middle" dominant-baseline="middle">MB</text>
+<text data-label="sc" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="655" y="607" text-anchor="middle" dominant-baseline="middle">SC</text>
+<text data-label="yt" style="font-size:10px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="90" y="245" text-anchor="middle" dominant-baseline="middle">YT</text>
+<text data-label="pe" style="font-size:7px;font-family:DM Mono,monospace;font-weight:500;fill:rgba(13,15,20,0.82);pointer-events:none;user-select:none" x="855" y="445" text-anchor="middle" dominant-baseline="middle">PE</text>
+      </svg>
+    </div>
+    <div class="map-sidebar">
+      <div class="map-legend">
+        <div class="legend-row"><div class="legend-swatch" style="background:#2ecf7a">A</div>Competitive across all dimensions</div>
+        <div class="legend-row"><div class="legend-swatch" style="background:#7ecf50">B</div>Strong; gap on one dimension</div>
+        <div class="legend-row"><div class="legend-swatch" style="background:#e8a730">C</div>Average; mixed strengths</div>
+        <div class="legend-row"><div class="legend-swatch" style="background:#e86020">D</div>Significant structural barriers</div>
+        <div class="legend-row"><div class="legend-swatch" style="background:#e84040">F</div>Moratoria or effectively closed</div>
+      </div>
+      <div class="filter-label">Filter map</div>
+      <div class="filter-btns">
+        <button class="filter-btn active" data-filter="all">All jurisdictions</button>
+        <button class="filter-btn" data-filter="ca">Canada only</button>
+        <button class="filter-btn" data-filter="us">United States only</button>
+        <button class="filter-btn" data-filter="A">Grade A</button>
+        <button class="filter-btn" data-filter="B">Grade B</button>
+        <button class="filter-btn" data-filter="F">Grade F</button>
+      </div>
+      <div class="dist-bar"><div class="dist-label">Distribution</div><div id="distRows"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile grade summary (replaces map on small screens) -->
+<div class="mobile-grade-summary">
+  <div class="mobile-grade-summary-label">Grade distribution — current curve</div>
+  <div id="mobileDistRows"></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="ca">Canada</button>
+  <button class="tab" data-tab="all">All</button>
+  <button class="tab" data-tab="us">United States</button>
+  <button class="tab" data-tab="A">A</button>
+  <button class="tab" data-tab="B">B</button>
+  <button class="tab" data-tab="C">C</button>
+  <button class="tab" data-tab="D">D</button>
+  <button class="tab" data-tab="F">F</button>
+</div>
+
+<div class="section-heading" id="cardsHeading">Canadian provinces — click any card to expand</div>
+<div class="province-grid" id="provinceGrid"></div>
+
+<footer>
+  <p><strong>Methodology:</strong> Six weighted dimensions: Power Access (25%), Regulatory Ease (22%), Power Economics (20%), Power Quality (13%), Market Proximity (12%), Sustainability (8%). Power Economics reflects utility $/kWh rate adjusted for climate-driven PUE efficiency and capex/kW considerations. Bell-curve: A = top 10%, B = next 20%, C = middle 40%, D = next 20%, F = bottom 10%.</p>
+  <br>
+  <p><strong>Power economics sources:</strong> EIA Electric Power Monthly (2024); utility large-load tariff schedules; PUE benchmarks per ASHRAE climate zone; Schneider Electric data centre cost modelling methodology.</p>
+  <br>
+  <p><strong>Canada policy sources:</strong> Stikeman Elliott, Osler, Torys, Cassels, Gowling WLG (2025-2026); CBC News; The Narwhal; The Logic; Data Center Dynamics; Canada-Alberta MOU (Nov. 2025); BC Energy Statutes Amendment Act, 2025 / Bill 31 (2026 competitive call launched Jan. 30, 2026); Ontario Bill 40 (Dec. 2025, regulations under development); Manitoba NDP rate decisions (PUB March 2026); Hydro-Québec rate application (Feb. 2026, 13¢/kWh pending Régie de l'énergie); Bell Canada / RM of Sherwood approval (April 20, 2026); ISED sovereign AI compute call (Jan. 2026); StrategyCorp, "Quid Pro Quo" (Jan. 2026).</p>
+  <br>
+  <p><strong>US policy sources:</strong> datacenterbans.com; state legislative records; Maine LD 307 (vetoed by Governor Mills April 23, 2026); New York S9144/A10141 (in committee); Vermont S.205; Virginia HB 1515 (continued, not dead); South Dakota SB 135; Sanders/AOC federal moratorium bill (March 2026). As of April 2026, at least 11 US states have introduced restrictive data centre legislation.</p>
+  <br>
+  <p>Strategic advisory purposes only. Not legal advice. Produced by StrategyCorp.</p>
+</footer>
+</div>
+
+<div id="map-tooltip">
+  <div style="overflow:hidden">
+    <div class="tt-grade" id="tt-grade"></div>
+    <div class="tt-name" id="tt-name"></div>
+  </div>
+  <div class="tt-country" id="tt-country"></div>
+  <div class="tt-score" id="tt-score"></div>
+  <div class="tt-bars" id="tt-bars"></div>
+</div>
+
+<script>
+// ============================================================
+// DATA LAYER — edit scores and notes here for weekly updates
+// Scores are 1-10. Grade is auto-calculated from bell curve.
+// traj options: positive | mixed | stable | negative
+// ============================================================
+const allData = [
+{"id":"on","name":"Ontario","abbr":"ON","country":"ca","power_access":7,"power_economics":6,"power_quality":8,"reg_ease":5,"market":9,"sustainability":6,"notes":"Best market access in Canada; 90% clean grid. Bill 40 ministerial approval gate and chronic IESO interconnection queue drag regulatory score. Toronto permitting slowest in Canada. Regulations still under development as of April 2026, with stakeholder consultation ongoing on which facilities will be subject to the new rules.","econ_note":"Competitive large-industrial rates (~8-10¢/kWh). Cold climate enables PUE of ~1.25, reducing effective $/kWh to IT load. Bill 40 rate uncertainty is the key risk to model.","traj":"mixed","traj_note":"Ministerial approval gate adds uncertainty but province has strong economic development intent. IESO planning new supply. Grid quality will improve as nuclear refurbishment completes.","improve":["File grid connection application early — queue is long","Engage ISED for federal sovereign compute alignment","Emphasize job creation and economic multiplier in provincial application — that is the key approval criterion","Consider locating outside GTA to avoid municipal permitting delays (Kitchener-Waterloo, London)"],"govt_advice":["Publish draft regulations under Bill 40 — the ministerial approval gate is creating investment uncertainty because no one knows the criteria. A published framework with clear timelines would reduce uncertainty without reducing oversight.","Direct the IESO to create a dedicated large-load fast-track stream for data centres that meet economic benefit thresholds. The current queue treats a 500 MW AI campus the same as a new subdivision.","Work with municipalities to establish pre-zoned data centre priority areas outside the GTA with pre-assessed grid capacity.","Align the provincial data centre framework with the federal sovereign compute MOU process. Projects that have federal backing should be able to access an expedited provincial pathway."],"score":6.65,"grade_na":"B","rank_na":11,"grade_ca":"A","rank_ca":1},
+{"id":"qc","name":"Québec","abbr":"QC","country":"ca","power_access":6,"power_economics":6,"power_quality":9,"reg_ease":4,"market":7,"sustainability":6,"notes":"Finest grid in North America but surplus gone. Hydro-Québec filed a proposed rate of 13¢/kWh for facilities over 5 MW on February 19, 2026 — approximately double the current large-user rate — pending approval by the Régie de l'énergie, expected second half 2026. Existing facilities receive a five-year phase-in. 5 MW ministerial authorization gate adds friction. Trajectory depends on Action Plan 2035 new supply timeline.","econ_note":"Proposed rate of 13¢/kWh for facilities over 5 MW (~double current large-user rate). Cold climate PUE ~1.2 partially offsets rate increase. At 13¢/kWh, Québec remains competitive versus US northeastern markets at 12-16¢/kWh but loses its pricing edge over other Canadian provinces. Crypto rate proposed at 19.5¢/kWh.","traj":"mixed","traj_note":"Rate increase pending Régie approval — model both current and proposed rates in financial projections. Action Plan 2035 new supply additions could restore capacity. Ministerial authorization adds friction but the grid quality remains world-class.","improve":["Submit a compelling economic benefit case to Hydro-Québec and the Minister","Model project economics at the proposed 13¢/kWh rate — cold climate PUE advantage (~1.2) partially offsets the increase","Engage Investissement Québec for economic development support","Projects demonstrating demand flexibility are more likely to receive favourable treatment"],"govt_advice":["The ministerial authorization process for loads over 5 MW needs published criteria and service standards. Applications should receive a decision within a defined timeframe — 90 days is a reasonable target.","The proposed rate doubling should be accompanied by a clear industrial policy statement on what type of data centre investment Québec actually wants. Raising rates without a corresponding attraction framework sends a mixed signal.","Investissement Québec should develop a dedicated data centre investment attraction program with a defined benefits framework.","Engage proactively with hyperscalers already operating in Québec to understand what would prompt expansion."],"score":6.47,"grade_na":"B","rank_na":12,"grade_ca":"A","rank_ca":2},
+{"id":"mb","name":"Manitoba","abbr":"MB","country":"ca","power_access":6,"power_economics":8,"power_quality":8,"reg_ease":5,"market":5,"sustainability":7,"notes":"Exceptional grid quality and political will at senior levels. General rate increases of 4% (2026), 3.5% (2027), and 3% (2028) approved by the Public Utilities Board March 2026 — no specific data centre large-user rate has been formalized. Drought-driven supply stress is real. Grid-balancing and back-feed capability remain genuine differentiators. RM of Ritchot and community opposition has proven harder than the policy framework suggested. Fall 2026 municipal elections add local uncertainty.","econ_note":"Hydro rates competitive even after general rate increases. Subarctic cold enables free cooling for much of the year — PUE of 1.15-1.2 achievable, materially reducing effective $/kWh to IT load. Grid-balancing capability creates potential for demand-response rate structures.","traj":"mixed","traj_note":"No specific data centre rate has been formalized as of April 2026. Community opposition has proven more significant than initially anticipated. Grid-balancing capability and cold climate PUE economics are permanent assets but the political pathway is more complex than the policy framework suggests.","improve":["Emphasize grid-balancing and back-feed capability in all government-facing materials","Engage Manitoba Hydro directly on accelerated connection pathway under Section 49.2(7)","Commission and publish an economic impact study before public hearings — timing is critical","Differentiate clearly from crypto mining in all public materials","Engage RM of Ritchot and surrounding municipalities directly — local political support is the variable you can actually move"],"govt_advice":["Develop a formal differentiation framework for data centre projects — a process by which projects meeting defined grid-balancing, emissions, and economic benefit criteria can access a preferential rate tier.","Ministerial direction under Section 49.2(7) of the Manitoba Hydro Amendment Act is the right tool to accelerate grid connection for qualifying projects. Create a published eligibility framework so applicants know how to qualify.","Commission an independent economic impact study on data centre development in Manitoba and publish it before the public hearing process begins. The opposition is filling an information vacuum — fill it first.","Engage the RM of Ritchot and surrounding municipalities directly before public hearings. Local political support is the variable you can actually move in the short term.","Develop a Manitoba Hydro grid-balancing services framework that formally recognizes large-load customers with back-feed capability as grid assets."],"score":6.4,"grade_na":"B","rank_na":14,"grade_ca":"B","rank_ca":3},
+{"id":"ab","name":"Alberta","abbr":"AB","country":"ca","power_access":7,"power_economics":5,"power_quality":4,"reg_ease":5,"market":6,"sustainability":5,"notes":"BYOG model works and federal MOU clears carbon friction. However, the AESO 1,200 MW large-load cap announced June 2025 creates severe queue competition — 29 proposed projects representing 16+ GW of demand chasing 1,200 MW of capacity through 2028. Bill 12 introduces a new levy effective December 31, 2026 for facilities with 75+ MW capacity. Carbon-heavy grid and water stress hurt quality and sustainability scores. Alberta is generating significant hype but real-world queue friction is material.","econ_note":"BYOG gas generation shifts economics to capital + fuel cost per kWh (~8-12¢/kWh all-in). Cold climate PUE ~1.2 partially offsets higher generation cost versus hydro neighbours. Bill 12 levy adds regulatory cost for large facilities.","traj":"mixed","traj_note":"BYOG model creates flexibility but the 16 GW demand queue against 1,200 MW of capacity is a structural constraint. Bill 12 levy adds complexity. Carbon intensity is a long-term negative. Federal MOU tailwind will not last indefinitely.","improve":["BYOG with on-site gas and renewable co-generation reduces grid dependency and carbon exposure","Engage AESO directly on large-load interconnection under the new framework — position early in the queue","Alberta Indigenous Opportunities Corporation partnerships improve social licence","Layer renewable PPAs over gas generation to improve grid quality score over time","Model Bill 12 levy costs for facilities above 75 MW threshold"],"govt_advice":["The 1,200 MW cap with 16+ GW of proposed demand requires a transparent, merit-based allocation process. Publish evaluation criteria now — the current uncertainty is suppressing projects that would otherwise commit.","The BYOG model is your competitive differentiator — codify it clearly in regulation so investors have legal certainty. Bill 8 and Bill 12 are a start; implement regulations promptly and clarify the levy framework.","Develop a provincial water management framework specific to data centres. The absence of clear rules creates risk for investors and regulators alike.","The AI concierge program is the right idea — resource it adequately and give it authority to coordinate across ministries."],"score":5.57,"grade_na":"C","rank_na":32,"grade_ca":"C","rank_ca":4},
+{"id":"bc","name":"British Columbia","abbr":"BC","country":"ca","power_access":5,"power_economics":7,"power_quality":9,"reg_ease":4,"market":7,"sustainability":5,"notes":"World-class clean grid but actively restricted. BC launched a competitive call process on January 30, 2026 (enabled by Bill 31) for 300 MW AI allocation, with successful applicants to be notified September 2026. Permanent crypto ban remains. The competitive process provides a clearer pathway than before but the 100 MW cap over two years remains restrictive relative to demand.","econ_note":"Clean hydro at competitive rates, but the competitive call process adds timeline uncertainty. Mild coastal climate (PUE ~1.15-1.2) is among the best in North America for cooling economics.","traj":"mixed","traj_note":"Competitive call launched January 2026 with September 2026 results — the first clear signal on BC's direction. The underlying grid assets remain exceptional. If the call process becomes regular and transparent, BC could recover its position.","improve":["Participate in BC Hydro competitive call — 300 MW AI allocation is the only near-term pathway; applications opened January 30, 2026","Differentiate clearly from crypto mining in all materials","Engage provincial government on long-term partnership model rather than transactional power purchase","Demonstrate local economic benefit (jobs, training, Indigenous partnership) to improve authorization prospects"],"govt_advice":["Publish evaluation criteria and scoring methodology for the competitive call before September results. Transparency in the selection process is essential for credibility.","Establish a formal pathway to distinguish AI data centres from crypto mining in statute — not just in policy statements.","The 100 MW cap over two years is too small to be competitive — consider whether it should apply to the sector overall or to individual projects.","Engage with First Nations governments on a benefits-sharing framework. Indigenous partnership could be a provincial differentiator and improve social licence significantly."],"score":5.72,"grade_na":"C","rank_na":35,"grade_ca":"C","rank_ca":5},
+{"id":"sk","name":"Saskatchewan","abbr":"SK","country":"ca","power_access":6,"power_economics":5,"power_quality":4,"reg_ease":9,"market":5,"sustainability":5,"notes":"Fastest regulatory pathway in Canada. Bell Canada's 300 MW AI data centre in the RM of Sherwood was approved April 20, 2026 — total time from rezoning to development agreement was approximately 40 days — despite nearly 200 protesters gathering April 18. Bell claims $12 billion economic contribution; operational launch targeted 2027. Carbon-heavy grid, water stress, and thin ecosystem are structural constraints. Best suited for operators who can bring their own generation.","econ_note":"BYOG gas model common here. Grid power competitive but carbon-heavy. Cold climate PUE ~1.2. All-in economics depend heavily on gas price and BYOG capital recovery.","traj":"positive","traj_note":"Bell Canada deal proves the model and the 40-day approval timeline is extraordinary. BYOG economics work if gas prices remain stable. Cold climate PUE partially offsets higher generation cost versus grid hydro.","improve":["BYOG with renewables co-generation improves both economics and carbon profile","Water recycling commitment is essential given provincial water stress","Engage SaskPower on long-term power agreements to complement BYOG","Build community relations early — Bell deal generated significant opposition that should not catch operators by surprise"],"govt_advice":["The Bell Canada announcement is a proof of concept — now build the policy framework around it. Publish a formal data centre investment attraction strategy with defined grid connection timelines, economic benefit expectations, and community engagement standards.","SaskPower needs a published large-load interconnection process with defined timelines. The current ad hoc approach worked for one project but will not scale.","Develop a provincial water allocation framework specific to data centres before the next large project comes forward.","Work with the RM of Sherwood and similar municipalities to develop a model data centre zoning framework that other RMs can adopt."],"score":5.81,"grade_na":"C","rank_na":33,"grade_ca":"C","rank_ca":6},
+{"id":"nb","name":"New Brunswick","abbr":"NB","country":"ca","power_access":5,"power_economics":6,"power_quality":6,"reg_ease":6,"market":4,"sustainability":5,"notes":"Nuclear baseload (Point Lepreau) is a genuine asset. No formal policy framework. Emerging community opposition around Saint John project. Thin ecosystem. Viable for small-to-mid scale operators willing to work without a policy framework.","econ_note":"Nuclear baseload (Point Lepreau) supports competitive and stable rates. Moderate climate (PUE ~1.3). Rate stability over long project life is a genuine asset.","traj":"stable","traj_note":"Nuclear baseload provides rate stability — a genuine long-term economic asset. No formal policy framework is both a risk and an opportunity.","improve":["Engage provincial government to develop a formal data centre attraction policy","NB Power large-load programs exist but are not publicized — engage directly","Nuclear baseload means rate certainty over project life, which reduces financial modelling risk"],"govt_advice":["The absence of a formal policy framework is your most solvable problem. Develop a data centre investment attraction strategy — it does not need to be elaborate.","NB Power has competitive large-load capacity — publish its tariff structures and make them easy for investors to find.","The Saint John opposition emerged partly because the community was not engaged early. Develop a community benefits framework as a template for future projects.","Point Lepreau nuclear baseload is a genuine asset that is undermarketed internationally."],"score":5.43,"grade_na":"C","rank_na":41,"grade_ca":"C","rank_ca":7},
+{"id":"ns","name":"Nova Scotia","abbr":"NS","country":"ca","power_access":5,"power_economics":5,"power_quality":5,"reg_ease":7,"market":4,"sustainability":6,"notes":"Active investment attraction, transatlantic connectivity advantage, and no restriction legislation. Grid is still coal-heavy. Small market and thin ecosystem limit scale. Best case for edge or latency-sensitive transatlantic use cases.","econ_note":"Rates moderate. Coal-heavy grid limits clean energy story. Mild Atlantic climate (PUE ~1.3) — some free cooling benefit but not the full subarctic advantage.","traj":"positive","traj_note":"Invest NS is actively courting investment. Renewable transition underway. Atlantic climate delivers moderate PUE advantage.","improve":["Target transatlantic latency-sensitive use cases where geographic advantage justifies moderate power economics","Engage Nova Scotia Power on large-load tariff structures","Position as Canada's North Atlantic gateway — federal sovereign compute framing is relevant"],"govt_advice":["Invest Nova Scotia's data centre attraction materials are strong — back them with a formal large-load power agreement framework from Nova Scotia Power.","Develop a provincial position on data centre energy sourcing. A formal commitment to allocating new renewable capacity to qualifying data centres would strengthen the investment case.","Engage federal counterparts (ISED, NRCan) on positioning Nova Scotia as Canada's North Atlantic data sovereignty gateway.","Establish a single-window permitting process for data centre development."],"score":5.4,"grade_na":"C","rank_na":42,"grade_ca":"C","rank_ca":8},
+{"id":"nl","name":"Newfoundland & Labrador","abbr":"NL","country":"ca","power_access":4,"power_economics":7,"power_quality":7,"reg_ease":5,"market":2,"sustainability":5,"notes":"Muskrat Falls debt burden suppresses pricing advantage. Remote location imposes connectivity costs that undermine otherwise strong hydro assets. No policy framework. Long-term option only.","econ_note":"Strong hydro assets but Muskrat Falls debt creates rate pressure uncertainty. Subarctic climate delivers excellent PUE (~1.15). Connectivity costs would need to be included in total cost models.","traj":"positive","traj_note":"Churchill Falls hydro is a long-term economic asset. Subarctic climate delivers PUE ~1.15. Connectivity cost is the variable that most changes the total cost model.","improve":["Commission connectivity feasibility study — subsea fibre cost determines whether the economics are viable","Engage federal government on data sovereignty framing","Muskrat Falls debt resolution would allow more competitive power pricing"],"govt_advice":["Commission a connectivity feasibility study — subsea fibre options between Labrador and mainland markets. This is the single investment that would most materially change NL's competitive position.","Develop a formal data centre policy framework even though no large projects are immediately imminent.","Engage the federal government explicitly on data sovereignty framing — Churchill Falls capacity serving national digital infrastructure interests is a legitimate argument for federal investment in connectivity.","Resolve the Muskrat Falls rate trajectory through the Public Utilities Board process."],"score":5.05,"grade_na":"D","rank_na":54,"grade_ca":"D","rank_ca":9},
+{"id":"pe","name":"Prince Edward Island","abbr":"PE","country":"ca","power_access":3,"power_economics":3,"power_quality":4,"reg_ease":6,"market":3,"sustainability":5,"notes":"Grid too small for any meaningful data centre load. Physically constrained. Streamlined planning processes are irrelevant at scale. No viable pathway for large-scale development.","econ_note":"Grid dependent on imported power — highest effective rates in the Atlantic region. Scale constraints make data centre economics unviable at any meaningful size.","traj":"negative","traj_note":"Grid scale constraints and imported power make data centre economics unviable at scale. Structural.","improve":["Focus on small-scale colocation only — sub-1 MW facilities where grid constraints are not disqualifying","Engage with NB Power on maritime grid integration"],"govt_advice":["Focus on what is actually achievable: small-scale, secure, sovereignty-focused compute.","Engage with NB Power and Nova Scotia Power on a maritime grid integration framework.","The provincial government's reputation for streamlined approvals is real and marketable — apply it to a formal data centre attraction program for sub-5 MW facilities."],"score":3.95,"grade_na":"F","rank_na":57,"grade_ca":"D","rank_ca":10},
+{"id":"yt","name":"Territories (YT/NWT/NU)","abbr":"Terr.","country":"ca","power_access":2,"power_economics":4,"power_quality":3,"reg_ease":4,"market":1,"sustainability":4,"notes":"Diesel grids, extreme remoteness, no connectivity, no policy framework. Cooling advantage is real but everything else is a barrier. Niche Arctic computing interest does not translate to viable large-scale development.","econ_note":"Diesel generation means $/kWh rates are the highest in Canada by a wide margin, negating the subarctic PUE advantage entirely. Not economically viable for data centre development.","traj":"stable","traj_note":"Diesel generation at high $/kWh negates the subarctic PUE advantage. Structural constraint not changing on any relevant investment timeline.","improve":["Only viable for small-scale research or sovereignty-focused applications","Federal funding for renewable energy infrastructure is the prerequisite for any commercial development"],"govt_advice":["Federal engagement is the only lever that matters at this scale. Advocate for inclusion in the federal northern digital infrastructure strategy.","Focus on research and sovereignty-oriented applications rather than commercial compute.","Work with territorial utilities to develop a renewable energy roadmap that reduces diesel dependency over time."],"score":3.01,"grade_na":"F","rank_na":59,"grade_ca":"F","rank_ca":11},
+{"id":"al","name":"Alabama","abbr":"AL","country":"us","power_access":5,"power_economics":6,"power_quality":4,"reg_ease":6,"market":5,"sustainability":5,"notes":"Alabama Power offers competitive rates. No restriction legislation. Limited existing ecosystem. Small market.","econ_note":"","traj":"stable","traj_note":"Average conditions across dimensions.","improve":["Engage Alabama Power on large-load tariff structures","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Publish grid connection timelines and tariff structures clearly.","Develop community benefits standards as a condition of state incentives.","Commission an economic impact study."],"score":5.29,"grade_na":"D","rank_na":46,"grade_us":"D","rank_us":38},
+{"id":"ar","name":"Arkansas","abbr":"AR","country":"us","power_access":5,"power_economics":6,"power_quality":4,"reg_ease":6,"market":5,"sustainability":5,"notes":"Entergy Arkansas offers low-cost power. No restriction legislation. Very limited existing ecosystem.","econ_note":"","traj":"stable","traj_note":"Average conditions across dimensions.","improve":["Engage Entergy Arkansas on large-load programs","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Publish grid connection timelines and tariff structures clearly.","Develop community benefits standards as a condition of state incentives."],"score":5.29,"grade_na":"D","rank_na":47,"grade_us":"D","rank_us":39},
+{"id":"az","name":"Arizona","abbr":"AZ","country":"us","power_access":7,"power_economics":3,"power_quality":5,"reg_ease":8,"market":7,"sustainability":5,"notes":"Phoenix metro is a major US data centre market. Fast permitting and no restriction legislation. Severe water stress is the material constraint — cooling in desert conditions is expensive and politically exposed. Trajectory is negative on sustainability as water scarcity intensifies.","econ_note":"APS and SRP rates ~8-10¢/kWh. Phoenix desert heat drives PUE to 1.5-1.6 — adding 50-60% to effective cost per kWh to IT load. Water for evaporative cooling is a direct operating cost and growing scarcity risk.","traj":"negative","traj_note":"Desert heat PUE (1.5-1.6) and water costs make Arizona one of the most expensive total-cost-of-power jurisdictions in North America. Trajectory is negative as water scarcity intensifies.","improve":["Run detailed $/kWh-to-IT-load model versus cooler alternatives before committing","Zero-liquid-discharge cooling systems reduce water operating cost and regulatory risk","Solar PPA can offset carbon intensity but does not reduce heat-driven PUE"],"govt_advice":["Develop a formal data centre water use framework before the next legislative session.","Revise the state's incentive program to make water efficiency a formal criterion.","Consider redirecting attraction efforts toward the Tucson corridor and northern Arizona where water availability is better."],"score":6.0,"grade_na":"C","rank_na":25,"grade_us":"C","rank_us":22},
+{"id":"ca","name":"California","abbr":"CA","country":"us","power_access":6,"power_economics":4,"power_quality":7,"reg_ease":3,"market":10,"sustainability":5,"notes":"Largest US tech market but CEQA permitting is a multi-year process. CAISO grid constrained. Water regulations intensifying. Enormous demand from hyperscalers and AI companies creates pressure — but the permitting environment is the worst in the US for large industrial development.","econ_note":"PG&E, SCE, and SDG&E rates ~12-16¢/kWh — among the highest in North America. Coastal climate (San Jose, LA) enables reasonable PUE ~1.25-1.3. But the rate burden is 2-3x Iowa or Tennessee.","traj":"negative","traj_note":"PG&E/SCE/SDG&E rates (~12-16¢/kWh) are 2-3x Iowa or Tennessee. Even mild coastal PUE (~1.25) does not offset this. High capex/kW from land and permitting compounds the economics.","improve":["Run a detailed cost-per-kWh-to-IT-load model versus Iowa, Ohio, or Tennessee alternatives before committing","Pursue existing facility acquisition or colocation rather than greenfield where capex/kW is already sunk"],"govt_advice":["CEQA reform is the highest-leverage action — categorical exemptions for data centre projects in designated industrial zones with clean energy commitments would change the investment environment.","Develop a CAISO large-load fast-track interconnection process for projects that commit to renewable matching and demand response."],"score":5.47,"grade_na":"C","rank_na":39,"grade_us":"C","rank_us":33},
+{"id":"co","name":"Colorado","abbr":"CO","country":"us","power_access":6,"power_economics":6,"power_quality":6,"reg_ease":6,"market":7,"sustainability":6,"notes":"Denver metro is a growing data centre market. Xcel Energy large-load programs. Legislation under discussion. Balanced mid-tier profile.","econ_note":"Xcel Colorado rates ~7-8¢/kWh. High altitude (Denver at 5,280 ft) assists cooling — PUE ~1.3. Growing renewable component improving clean energy matching.","traj":"stable","traj_note":"High altitude assists cooling. Xcel rates and growing renewables. Moderate economics.","improve":["High altitude (Denver 5,280 ft) assists cooling — model as PUE advantage","Xcel renewable PPAs readily available — include in total economics presentation"],"govt_advice":["Engage the state legislative process on data centre energy policy before legislation advances.","Work with Xcel Energy on a large-load renewable procurement program."],"score":6.12,"grade_na":"C","rank_na":23,"grade_us":"C","rank_us":20},
+{"id":"ct","name":"Connecticut","abbr":"CT","country":"us","power_access":5,"power_economics":4,"power_quality":6,"reg_ease":5,"market":8,"sustainability":5,"notes":"Strong market access. Eversource grid. High costs and complex permitting. Legislation under discussion. Better suited for colocation than large-scale greenfield.","econ_note":"","traj":"stable","traj_note":"Significant structural barriers on power economics and regulatory environment.","improve":["Target colocation over greenfield given cost environment","Engage Eversource on large-load tariff structures"],"govt_advice":["Develop a formal data centre attraction policy with clear eligibility criteria.","Identify priority sites with confirmed grid capacity and streamlined zoning."],"score":5.29,"grade_na":"D","rank_na":48,"grade_us":"D","rank_us":40},
+{"id":"de","name":"Delaware","abbr":"DE","country":"us","power_access":5,"power_economics":5,"power_quality":5,"reg_ease":5,"market":8,"sustainability":5,"notes":"Strong market access (Philadelphia/NYC metro). Small state with limited land. Pepco grid. No restriction legislation.","econ_note":"","traj":"stable","traj_note":"Average conditions across dimensions.","improve":["Target Philadelphia metro market proximity as primary advantage","Engage Pepco on large-load programs"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":5.36,"grade_na":"D","rank_na":44,"grade_us":"D","rank_us":36},
+{"id":"fl","name":"Florida","abbr":"FL","country":"us","power_access":6,"power_economics":4,"power_quality":4,"reg_ease":8,"market":7,"sustainability":5,"notes":"No restriction legislation. Strong permitting environment. Heat and humidity drive cooling costs significantly. Hurricane risk and climate exposure are real operational considerations. Miami market is growing for latency-sensitive Latin America connectivity.","econ_note":"FPL and Duke Florida rates ~8-10¢/kWh. Tropical Florida heat drives PUE to 1.5-1.6. Miami data centres serve Latin American latency use cases where the premium is justified. For bulk compute, Florida's power economics are unfavourable.","traj":"stable","traj_note":"Tropical heat PUE (1.5-1.6) and higher utility rates make Florida expensive for bulk compute. Miami's value is latency, not economics.","improve":["Miami is the right market for Latin America latency use cases — not for bulk compute","Hurricane hardening investment is essential and should be modelled as capex/kW"],"govt_advice":["Work with the Public Service Commission to develop formal large-load data centre tariff structures.","Develop a Florida data centre resilience standard through the Department of Emergency Management."],"score":5.82,"grade_na":"C","rank_na":32,"grade_us":"C","rank_us":28},
+{"id":"ga","name":"Georgia","abbr":"GA","country":"us","power_access":7,"power_economics":6,"power_quality":5,"reg_ease":8,"market":7,"sustainability":7,"notes":"Georgia Power offering competitive large-load agreements. Atlanta metro is a mature secondary market. Strong political stability for investment. Note: Georgia is listed among states that have put forward restrictive data centre legislation as of April 2026 — current status of specific bills requires verification before relying on regulatory ease score.","econ_note":"Georgia Power large-load rates ~6-7¢/kWh. Warm humid summers drive PUE to ~1.4, adding ~40% to effective $/kWh versus northern markets. Competitive capex/kW on land and construction.","traj":"stable","traj_note":"Warm climate drives PUE to ~1.4 — model this against cooler alternatives when comparing total power cost. Legislative environment bears watching in 2026 session.","improve":["Engage Georgia Power on large-load tariff structures to lock in rates","Warm climate PUE (~1.4) should be offset with modern cooling investment","Renewable PPA with Georgia Power would improve sustainability score","Monitor 2026 legislative session for any restrictive bills advancing"],"govt_advice":["Commission a proactive legislative response to any restriction bills. A formal data centre policy framework with community benefits requirements pre-empts future attempts.","Work with Georgia Power on a renewable energy expansion program tied to data centre load growth.","Establish county-level community benefits standards as a condition of state incentives.","Develop secondary market programs for Savannah, Augusta, and Columbus."],"score":6.76,"grade_na":"B","rank_na":9,"grade_us":"B","rank_us":9},
+{"id":"ia","name":"Iowa","abbr":"IA","country":"us","power_access":7,"power_economics":8,"power_quality":6,"reg_ease":8,"market":6,"sustainability":8,"notes":"Major hyperscaler presence. MidAmerican Energy renewable-heavy. No restriction legislation. Strong sustainability score.","econ_note":"MidAmerican Energy rates ~4-5¢/kWh — among the lowest in North America — backed by an aggressively renewable grid. Cold climate PUE ~1.2. Annual cost per kW of IT load is among the most competitive on the continent.","traj":"positive","traj_note":"Best power economics in North America for large-scale compute. MidAmerican rates (~4-5¢/kWh) combined with cold climate PUE (~1.2) produce the lowest effective $/kWh to IT load of any major US market.","improve":["Best suited for large-scale AI training workloads where latency is not the primary constraint","Leverage MidAmerican renewable PPAs for 100% renewable matching","Model annual cost per kW of IT load versus coastal alternatives — the gap is typically 40-60% in Iowa's favour"],"govt_advice":["Iowa's social licence advantage is real and fragile — document it proactively with community benefits reporting from existing hyperscaler campuses.","Work with MidAmerican Energy to develop a large-load renewable matching program available to new entrants.","Invest in fibre and network infrastructure in data centre corridors."],"score":7.25,"grade_na":"A","rank_na":2,"grade_us":"A","rank_us":2},
+{"id":"id","name":"Idaho","abbr":"ID","country":"us","power_access":6,"power_economics":7,"power_quality":7,"reg_ease":7,"market":5,"sustainability":6,"notes":"Clean hydro grid (Idaho Power). No restriction legislation. Lower costs than coastal markets. Limited market proximity. Growing as an alternative to constrained Pacific Northwest markets.","econ_note":"Idaho Power hydro rates ~4-5¢/kWh — among the lowest in the US. Cold climate PUE ~1.2. Annual cost per kW of IT load is excellent. Underrated power economics story compared to better-known Pacific Northwest markets.","traj":"positive","traj_note":"Idaho Power hydro rates (~4-5¢/kWh) combined with cold climate PUE (~1.2) produce excellent all-in power economics. Underrated market.","improve":["Model annual cost per kW of IT load versus Pacific Northwest alternatives — Idaho often wins on economics","Engage Idaho Power directly on large-load interconnection — process is faster than PNW neighbours","Position as clean hydro alternative to congested Oregon/Washington markets"],"govt_advice":["Work with Idaho Power on a published large-load program with defined rates, timelines, and interconnection process.","Develop a formal Idaho data centre siting framework for the Boise-Nampa and Twin Falls corridors."],"score":6.43,"grade_na":"B","rank_na":13,"grade_us":"B","rank_us":11},
+{"id":"il","name":"Illinois","abbr":"IL","country":"us","power_access":7,"power_economics":6,"power_quality":6,"reg_ease":7,"market":8,"sustainability":7,"notes":"Chicago is a top-5 US data centre market. ComEd grid offers strong reliability. Nuclear baseload improving grid quality. No restriction legislation. Strong market access score.","econ_note":"ComEd rates ~6-7¢/kWh. Cold Chicago winters deliver PUE ~1.2. Nuclear baseload provides rate stability. Suburban Chicago (Elk Grove, Aurora) offers good capex/kW.","traj":"positive","traj_note":"Chicago market growing. Nuclear baseload improves rate stability. Cold winters enable PUE ~1.2.","improve":["Engage ComEd on large-load programs early — queue forming","Cold climate free cooling months represent real operating savings — quantify in financial models"],"govt_advice":["Work with ComEd to establish a dedicated large-load interconnection track for data centres.","Extend and deepen the existing data centre tax incentive program with renewable alignment requirements."],"score":6.79,"grade_na":"B","rank_na":8,"grade_us":"B","rank_us":8},
+{"id":"in","name":"Indiana","abbr":"IN","country":"us","power_access":6,"power_economics":7,"power_quality":4,"reg_ease":7,"market":7,"sustainability":6,"notes":"NIPSCO and AES Indiana offer large-load programs. No restriction legislation. Indianapolis market growing. Central location. Coal-heavy grid is a negative for ESG.","econ_note":"NIPSCO and AES Indiana rates ~6-7¢/kWh. Cold climate PUE ~1.25. Competitive economics similar to Ohio.","traj":"stable","traj_note":"Competitive rates and cold climate PUE. Similar economics to Ohio and Illinois.","improve":["Cold climate PUE advantage (~1.25) is real — quantify in site selection presentations","Indianapolis has good market access relative to other Midwest markets"],"govt_advice":["Develop a formal data centre attraction policy.","Engage your primary utility on large-load tariff options and publish them."],"score":6.28,"grade_na":"B","rank_na":17,"grade_us":"B","rank_us":14},
+{"id":"ks","name":"Kansas","abbr":"KS","country":"us","power_access":6,"power_economics":6,"power_quality":5,"reg_ease":7,"market":5,"sustainability":6,"notes":"Evergy large-load programs. No restriction legislation. Wind energy growing. Limited market proximity.","econ_note":"","traj":"stable","traj_note":"Average conditions. Power economics and regulatory ease are the two dimensions most worth prioritizing.","improve":["Publish large-load tariff options and interconnection timelines publicly","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity and streamlined zoning."],"score":5.97,"grade_na":"C","rank_na":26,"grade_us":"C","rank_us":23},
+{"id":"ky","name":"Kentucky","abbr":"KY","country":"us","power_access":6,"power_economics":7,"power_quality":4,"reg_ease":7,"market":6,"sustainability":6,"notes":"Low electricity costs from legacy coal but transitioning. No restriction legislation. Louisville market growing. Low operating costs are competitive.","econ_note":"LG&E and KU rates ~5-6¢/kWh — some of the cheapest grid power in the eastern US. Moderate climate (PUE ~1.3). Cost advantage is real but grid is carbon-heavy.","traj":"stable","traj_note":"LG&E and KU rates among cheapest in eastern US (~5-6¢/kWh). Moderate climate (PUE ~1.3). Cost advantage is real but grid is carbon-heavy.","improve":["Low utility rates are the primary economic argument — model effective $/kWh to IT load at PUE ~1.3","Renewable PPA layering can offset carbon intensity without materially affecting power economics"],"govt_advice":["Develop a formal data centre attraction policy.","Engage your primary utility on large-load tariff options and publish them."],"score":6.16,"grade_na":"C","rank_na":22,"grade_us":"C","rank_us":19},
+{"id":"la","name":"Louisiana","abbr":"LA","country":"us","power_access":6,"power_economics":6,"power_quality":4,"reg_ease":7,"market":5,"sustainability":5,"notes":"Entergy Louisiana. No restriction legislation. Low costs but hurricane risk. Limited existing ecosystem.","econ_note":"","traj":"stable","traj_note":"Average conditions across dimensions.","improve":["Publish large-load tariff options and interconnection timelines publicly","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity and streamlined zoning."],"score":5.76,"grade_na":"C","rank_na":33,"grade_us":"C","rank_us":29},
+{"id":"ma","name":"Massachusetts","abbr":"MA","country":"us","power_access":5,"power_economics":4,"power_quality":6,"reg_ease":4,"market":9,"sustainability":5,"notes":"Excellent market access. Eversource/National Grid. Complex permitting and high land costs. Legislation under discussion. Better for colocation than greenfield.","econ_note":"","traj":"stable","traj_note":"Significant structural barriers on power economics and regulatory environment.","improve":["Target colocation over greenfield","Engage on Boston metro proximity use cases"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":5.19,"grade_na":"D","rank_na":50,"grade_us":"D","rank_us":42},
+{"id":"md","name":"Maryland","abbr":"MD","country":"us","power_access":6,"power_economics":5,"power_quality":5,"reg_ease":5,"market":9,"sustainability":5,"notes":"Strong market access (DC metro). BGE/Pepco grid. Legislation under discussion. High land costs. Proximity to federal and defence demand is a unique advantage.","econ_note":"","traj":"stable","traj_note":"Average conditions. Proximity to federal demand is the differentiator.","improve":["Position federal and defence adjacency as primary market story","Engage BGE/Pepco on large-load tariff structures"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":5.73,"grade_na":"C","rank_na":34,"grade_us":"C","rank_us":30},
+{"id":"me","name":"Maine","abbr":"ME","country":"us","power_access":5,"power_economics":5,"power_quality":6,"reg_ease":3,"market":4,"sustainability":4,"notes":"LD 307 passed both chambers but was vetoed by Governor Janet Mills on April 23, 2026 — the moratorium is not currently in effect. The governor stated she would have signed the bill if it included an exemption for a specific project. The political environment remains cautious and the Data Centre Coordination Council should be monitored for post-veto developments. Cold climate advantage is real but the political environment requires careful navigation.","econ_note":"Eversource Maine rates ~10-12¢/kWh — high by US standards. Cold climate PUE ~1.15 is exceptional, partially offsetting the rate. Governor's veto means the economics are relevant again, but the political environment warrants caution.","traj":"mixed","traj_note":"Governor Mills vetoed LD 307 on April 23, 2026 — moratorium not in effect. Cold climate delivers exceptional PUE (~1.15). But underlying political opposition remains; watch the Data Centre Coordination Council for next steps.","improve":["Document the cold climate PUE economics in all presentations — it is genuinely among the best in North America","Engage the Data Centre Coordination Council to understand what approval framework is being developed post-veto","Build community benefits commitments into any proposal proactively"],"govt_advice":["Resource the Data Centre Coordination Council adequately. The veto creates a window to develop a durable approval framework before the political pressure returns.","Commission an economic impact study during this window. Quantifying what Maine is foregoing creates the evidence base for a more balanced framework.","Engage operators who expressed pre-bill interest. Understanding what commitments they would make on jobs, local procurement, clean energy, and grid services gives the Council the information it needs.","Develop a community benefits framework that addresses the concerns LD 307 was responding to: noise, water use, grid impact, local employment."],"score":4.3,"grade_na":"D","rank_na":55,"grade_us":"D","rank_us":46},
+{"id":"mi","name":"Michigan","abbr":"MI","country":"us","power_access":6,"power_economics":7,"power_quality":5,"reg_ease":6,"market":7,"sustainability":6,"notes":"Governor Whitmer publicly opposes HB 4521 moratorium. Consumers Energy and DTE large-load programs. Mid-tier profile. Cold climate advantage.","econ_note":"Consumers Energy and DTE rates ~6-7¢/kWh. Cold Michigan winters deliver PUE ~1.2. Competitive economics relative to coastal markets.","traj":"stable","traj_note":"Competitive rates and cold climate PUE ~1.2. Good economics relative to coastal markets.","improve":["Model cold climate PUE advantage explicitly — PUE ~1.2 versus ~1.4 in warm markets is 15-20% savings","West Michigan (Grand Rapids area) has better grid availability than Detroit metro"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":6.19,"grade_na":"B","rank_na":18,"grade_us":"B","rank_us":15},
+{"id":"mn","name":"Minnesota","abbr":"MN","country":"us","power_access":6,"power_economics":7,"power_quality":6,"reg_ease":6,"market":7,"sustainability":6,"notes":"Active market, cold climate advantage, Xcel Energy large-load programs. Legislation under discussion but no moratorium. Balanced mid-tier jurisdiction.","econ_note":"Xcel Energy rates ~6-7¢/kWh. Cold Minnesota winters enable free cooling for 5-6 months per year — PUE ~1.2 readily achievable. Strong all-in power economics for the Midwest.","traj":"stable","traj_note":"Cold Minnesota winters deliver PUE ~1.2 and many free-cooling months. Xcel rates are competitive. Strong all-in economics for the Midwest.","improve":["Quantify free cooling months explicitly — PUE ~1.2 versus southeastern alternatives at 1.4+ represents real savings","Monitor legislative session; cold climate economics are permanent; legislative risk is not"],"govt_advice":["Work with Xcel Energy on a large-load interconnection program with published timelines and tariff options.","Quantify and publish Minnesota's cold climate PUE advantage — it is a marketing tool no other state can replicate."],"score":6.32,"grade_na":"B","rank_na":16,"grade_us":"B","rank_us":13},
+{"id":"mo","name":"Missouri","abbr":"MO","country":"us","power_access":6,"power_economics":6,"power_quality":4,"reg_ease":7,"market":6,"sustainability":6,"notes":"Ameren Missouri. No restriction legislation. Kansas City and St. Louis markets growing. Mid-tier profile.","econ_note":"","traj":"stable","traj_note":"Average conditions across dimensions.","improve":["Publish large-load tariff options and interconnection timelines publicly","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":5.96,"grade_na":"C","rank_na":27,"grade_us":"C","rank_us":24},
+{"id":"ms","name":"Mississippi","abbr":"MS","country":"us","power_access":5,"power_economics":6,"power_quality":4,"reg_ease":6,"market":4,"sustainability":5,"notes":"Entergy Mississippi. Low costs. Very limited existing ecosystem. Small market.","econ_note":"","traj":"stable","traj_note":"Significant structural barriers — limited market and thin ecosystem.","improve":["Engage Entergy Mississippi on large-load programs","Position low costs as primary economic argument"],"govt_advice":["Publish grid connection timelines and tariff structures clearly.","Commission an economic impact study."],"score":5.17,"grade_na":"D","rank_na":51,"grade_us":"D","rank_us":43},
+{"id":"mt","name":"Montana","abbr":"MT","country":"us","power_access":5,"power_economics":6,"power_quality":6,"reg_ease":6,"market":3,"sustainability":6,"notes":"NorthWestern Energy. Clean hydro component. No restriction legislation. Very limited market proximity.","econ_note":"","traj":"stable","traj_note":"Significant structural barriers — primarily market proximity.","improve":["Engage NorthWestern Energy on large-load tariff structures","Position clean hydro component as grid quality advantage"],"govt_advice":["Publish grid connection timelines and tariff structures clearly.","Commission an economic impact study."],"score":5.39,"grade_na":"D","rank_na":43,"grade_us":"D","rank_us":35},
+{"id":"nc","name":"North Carolina","abbr":"NC","country":"us","power_access":7,"power_economics":6,"power_quality":5,"reg_ease":8,"market":7,"sustainability":7,"notes":"Research Triangle is a mature data centre market. Duke Energy offers competitive large-load programs. No restriction legislation. Good regulatory environment and growing renewable mix. Solid across all dimensions.","econ_note":"Duke Energy Carolinas rates ~6-7¢/kWh. Warm climate (PUE ~1.35). Research Triangle facility costs are competitive versus coastal markets. Duke's renewable expansion will improve clean energy matching economics.","traj":"positive","traj_note":"Duke Energy renewable transition improving grid quality over time. Warm climate PUE ~1.35 — manageable with efficient cooling.","improve":["Duke Energy Carolinas is expanding renewable capacity — align procurement timing","Secondary markets (Catawba County, Guilford) offer better capex/kW than Research Triangle"],"govt_advice":["Work with Duke Energy Carolinas on a published renewable energy procurement pathway for large data centre customers.","Develop secondary market certification programs in Catawba County, Guilford County, and the Triad."],"score":6.76,"grade_na":"B","rank_na":10,"grade_us":"B","rank_us":10},
+{"id":"nd","name":"North Dakota","abbr":"ND","country":"us","power_access":5,"power_economics":7,"power_quality":5,"reg_ease":6,"market":3,"sustainability":6,"notes":"Basin Electric. Wind energy growing. No restriction legislation. Very limited market proximity.","econ_note":"","traj":"stable","traj_note":"Average conditions. Market proximity is the primary structural constraint.","improve":["Publish large-load tariff options and interconnection timelines publicly","Model effective $/kWh to IT load and publish for investor reference"],"govt_advice":["Publish grid connection timelines and tariff structures clearly.","Commission an economic impact study."],"score":5.46,"grade_na":"C","rank_na":40,"grade_us":"C","rank_us":34},
+{"id":"ne","name":"Nebraska","abbr":"NE","country":"us","power_access":6,"power_economics":7,"power_quality":5,"reg_ease":7,"market":5,"sustainability":6,"notes":"OPPD and LES public power. No restriction legislation. Omaha market growing. Competitive rates.","econ_note":"OPPD and LES public power rates ~5-6¢/kWh. Cold Nebraska winters deliver PUE ~1.2. Public power rate stability reduces long-term modelling uncertainty. Underrated economics.","traj":"stable","traj_note":"OPPD and LES public power rates (~5-6¢/kWh) and cold Nebraska winters (PUE ~1.2) combine for excellent power economics. Rate certainty from public power is a financial modelling advantage.","improve":["Public power rate stability is a financial modelling advantage — emphasize in long-term economics presentations","Cold climate PUE ~1.2 is achievable and permanent"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":6.17,"grade_na":"C","rank_na":20,"grade_us":"C","rank_us":17},
+{"id":"nh","name":"New Hampshire","abbr":"NH","country":"us","power_access":5,"power_economics":5,"power_quality":5,"reg_ease":5,"market":7,"sustainability":5,"notes":"Eversource NH. Strong market access (Boston metro). High costs. Legislation under discussion. Small market.","econ_note":"","traj":"stable","traj_note":"Significant structural barriers on power economics.","improve":["Target Boston metro proximity use cases","Engage Eversource on large-load tariff structures"],"govt_advice":["Publish grid connection timelines and tariff structures clearly.","Commission an economic impact study."],"score":5.24,"grade_na":"D","rank_na":49,"grade_us":"D","rank_us":41},
+{"id":"nj","name":"New Jersey","abbr":"NJ","country":"us","power_access":6,"power_economics":5,"power_quality":6,"reg_ease":5,"market":9,"sustainability":5,"notes":"Excellent market access (NYC metro). PSE&G grid strong. High land costs and complex permitting dampen regulatory score. Legislation under discussion.","econ_note":"","traj":"stable","traj_note":"Average conditions. NYC market proximity is the primary advantage.","improve":["Publish large-load tariff options and interconnection timelines publicly","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":5.86,"grade_na":"C","rank_na":31,"grade_us":"C","rank_us":27},
+{"id":"nm","name":"New Mexico","abbr":"NM","country":"us","power_access":5,"power_economics":5,"power_quality":5,"reg_ease":7,"market":4,"sustainability":5,"notes":"PNM. Growing solar. No restriction legislation. Limited market proximity and water stress.","econ_note":"","traj":"stable","traj_note":"Average conditions. Market proximity and water stress are primary constraints.","improve":["Engage PNM on large-load tariff structures","Solar PPA availability is strong — build clean energy story around it"],"govt_advice":["Develop a formal data centre attraction policy.","Engage PNM on a renewable energy procurement program."],"score":5.32,"grade_na":"D","rank_na":45,"grade_us":"D","rank_us":37},
+{"id":"nv","name":"Nevada","abbr":"NV","country":"us","power_access":6,"power_economics":4,"power_quality":5,"reg_ease":8,"market":7,"sustainability":5,"notes":"Las Vegas corridor has strong existing infrastructure and no restriction legislation. Water stress similar to Arizona. Growing renewable capacity (solar) improving grid quality score over time. Reno market growing quickly.","econ_note":"NV Energy rates ~8-10¢/kWh. Desert heat in Las Vegas Valley drives PUE to 1.5+. Water for cooling is both a direct cost and a regulatory risk. Reno offers marginally better economics than Las Vegas on both rates and climate.","traj":"mixed","traj_note":"Desert heat PUE (1.5+) and high utility rates make Nevada a more expensive total-cost-of-power jurisdiction than its active market suggests. Reno has better economics than Las Vegas on both dimensions.","improve":["Model heat-driven PUE costs explicitly — at 1.5+ PUE, effective $/kWh to IT load is 50% above the nominal utility rate","Water recycling investment is essential","Reno offers better climate economics (~1.3 PUE) than Las Vegas corridor"],"govt_advice":["Develop a formal data centre water management framework.","Develop Reno as a formal second data centre market with published grid capacity data."],"score":5.95,"grade_na":"C","rank_na":28,"grade_us":"C","rank_us":25},
+{"id":"ny","name":"New York","abbr":"NY","country":"us","power_access":6,"power_economics":5,"power_quality":6,"reg_ease":2,"market":9,"sustainability":3,"notes":"Massive market but S9144/A10141 (introduced February 6, 2026) remains in the Senate Environmental Conservation Committee. Companion bill S9182 ('Stop Subsidizing Data Centers Act') also introduced. The legislation proposes a three-year moratorium on permits for data centres over 20 MW and would require a new General Environmental Impact Statement before new permits can be issued. Investment uncertainty is real even without passage.","econ_note":"ConEd and NYSEG rates ~8-10¢/kWh. Cold climate PUE ~1.2-1.25. High rates offset the climate advantage. S9144 creates investment uncertainty before economics are even evaluated.","traj":"negative","traj_note":"Cold climate PUE (~1.2-1.25) is genuine but rates (~8-10¢/kWh) are high. S9144/A10141 creates investment uncertainty before economics are even evaluated. Upstate New York offers better economics and lower political temperature.","improve":["Upstate New York (Albany, Buffalo corridors) offers better power economics and lower political temperature than downstate","Model cold climate PUE advantage in presentations to NYSERDA"],"govt_advice":["NYSERDA should publish a data centre approval pathway — a defined process with criteria, timelines, and decision standards — that gives projects a route forward regardless of whether S9144 advances.","Engage S9144 sponsors directly. The concerns driving moratorium legislation — grid impact, community disruption, water use, local employment — are addressable through a policy framework.","Develop an upstate New York data centre strategy through NYPA.","Commission an economic analysis of investment that has not come to New York as a result of regulatory uncertainty."],"score":5.04,"grade_na":"F","rank_na":55,"grade_us":"F","rank_us":46},
+{"id":"oh","name":"Ohio","abbr":"OH","country":"us","power_access":7,"power_economics":7,"power_quality":5,"reg_ease":8,"market":8,"sustainability":7,"notes":"Rapidly growing data centre market. No restriction legislation. AEP and FirstEnergy offer large-load programs. Central location provides strong Midwest market access. Underrated jurisdiction.","econ_note":"AEP and FirstEnergy large-load rates ~6-7¢/kWh. Cold Ohio winters enable free cooling for 4-5 months per year — PUE of ~1.25 is achievable. Strong power economics relative to both coasts and warm-climate states.","traj":"positive","traj_note":"Growing fast as Virginia overflow market. Cold Ohio winters deliver PUE ~1.25 — model this advantage in cost comparisons against southern US markets.","improve":["Secure long-term power purchase agreements with AEP or FirstEnergy before rates rise","Cold climate free cooling: quantify the PUE advantage (~1.25 vs ~1.4 in warm markets)","Renewable PPA layering can improve grid quality score over time"],"govt_advice":["Publish a formal Ohio data centre investment framework — the state is capturing Virginia overflow but has no formal policy to sustain that trend.","Work with AEP and FirstEnergy to publish large-load tariff options and interconnection timelines.","Develop renewable energy procurement guidance for large-load customers."],"score":7.08,"grade_na":"A","rank_na":3,"grade_us":"A","rank_us":3},
+{"id":"ok","name":"Oklahoma","abbr":"OK","country":"us","power_access":6,"power_economics":7,"power_quality":5,"reg_ease":7,"market":5,"sustainability":6,"notes":"OG&E and PSO. No restriction legislation. Low costs. Wind energy growing. Limited ecosystem.","econ_note":"","traj":"stable","traj_note":"Average conditions across dimensions.","improve":["Publish large-load tariff options and interconnection timelines publicly","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":6.17,"grade_na":"C","rank_na":21,"grade_us":"C","rank_us":18},
+{"id":"or","name":"Oregon","abbr":"OR","country":"us","power_access":7,"power_economics":7,"power_quality":7,"reg_ease":7,"market":7,"sustainability":7,"notes":"Columbia River Gorge corridor (The Dalles) is a major hyperscaler hub. Clean hydro grid, good market access to West Coast, no moratoria. Legislation under discussion but not advancing. Balanced profile.","econ_note":"BPA and PGE rates ~5-6¢/kWh. Mild Pacific Northwest climate (PUE ~1.25). Columbia River Gorge free cooling is well documented. Strong all-in economics, though transmission constraints are a capex consideration.","traj":"stable","traj_note":"Columbia River Gorge BPA rates and mild climate are a durable economic advantage. Watch state legislative session.","improve":["Engage with BPA on transmission capacity before committing to site","Consider Prineville/Hillsboro as alternatives with more headroom than The Dalles corridor"],"govt_advice":["Engage with BPA proactively on transmission capacity planning for data centre growth corridors.","Establish legislative dialogue now with key committee chairs on the energy impact of data centres."],"score":7.0,"grade_na":"A","rank_na":4,"grade_us":"A","rank_us":4},
+{"id":"pa","name":"Pennsylvania","abbr":"PA","country":"us","power_access":7,"power_economics":6,"power_quality":5,"reg_ease":6,"market":8,"sustainability":6,"notes":"PJM grid interconnection provides strong reliability and market access. Proximity to NYC and DC markets. Legislation advancing but not restrictive yet. Nuclear baseload improving grid quality score.","econ_note":"PPL and PECO rates ~7-8¢/kWh. Cold Pennsylvania winters enable PUE ~1.25. PJM interconnection provides grid reliability. Lehigh Valley facilities offer competitive capex/kW relative to Northern Virginia.","traj":"stable","traj_note":"PJM grid provides rate stability. Cold Pennsylvania winters deliver PUE ~1.25 — competitive economics versus southern US alternatives.","improve":["Target Lehigh Valley for best combination of grid capacity, capex/kW, and cold climate PUE economics","PJM interconnection requires early engagement — file 18-24 months ahead of target commissioning"],"govt_advice":["Develop a Pennsylvania data centre site certification program in the Lehigh Valley and I-78 corridor.","Work with PPL and PECO on a renewable energy matching program."],"score":6.36,"grade_na":"B","rank_na":15,"grade_us":"B","rank_us":12},
+{"id":"ri","name":"Rhode Island","abbr":"RI","country":"us","power_access":5,"power_economics":4,"power_quality":6,"reg_ease":4,"market":8,"sustainability":5,"notes":"National Grid. Strong market access (Boston metro). High costs and complex permitting. Smallest continental US state — land constrained.","econ_note":"","traj":"stable","traj_note":"Significant structural barriers on power economics and land constraints.","improve":["Target colocation over greenfield","Focus on Boston metro latency use cases"],"govt_advice":["Publish grid connection timelines and tariff structures clearly.","Commission an economic impact study."],"score":5.07,"grade_na":"D","rank_na":53,"grade_us":"F","rank_us":45},
+{"id":"sc","name":"South Carolina","abbr":"SC","country":"us","power_access":6,"power_economics":6,"power_quality":5,"reg_ease":7,"market":6,"sustainability":6,"notes":"Duke Energy Carolinas and Dominion Energy SC. No restriction legislation. Growing market. Competitive costs.","econ_note":"","traj":"stable","traj_note":"Average conditions across dimensions.","improve":["Publish large-load tariff options and interconnection timelines publicly","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":6.09,"grade_na":"C","rank_na":24,"grade_us":"C","rank_us":21},
+{"id":"sd","name":"South Dakota","abbr":"SD","country":"us","power_access":5,"power_economics":6,"power_quality":5,"reg_ease":5,"market":4,"sustainability":5,"notes":"SB 135 passed — local governments now empowered to restrict data centres. Creates patchwork of conditions. Business-friendly state government but local control creates uncertainty.","econ_note":"Basin Electric rates ~7-8¢/kWh. Cold climate PUE ~1.2. Moderate economics. SB 135 local authority creates site-specific uncertainty that complicates financial modelling.","traj":"negative","traj_note":"Basin Electric rates moderate. Cold climate PUE ~1.2. SB 135 creates site-specific uncertainty that complicates financial modelling — risk-adjust capex/kW accordingly.","improve":["Conduct thorough community engagement before site selection — local opposition can now block projects","Document job creation and tax revenue commitments in binding development agreements"],"govt_advice":["Develop a model data centre community benefits ordinance that counties can adopt voluntarily.","Establish a state-level pre-approval process for data centre projects.","Publish a South Dakota data centre investment guide mapping county-by-county conditions."],"score":5.08,"grade_na":"D","rank_na":52,"grade_us":"D","rank_us":44},
+{"id":"tn","name":"Tennessee","abbr":"TN","country":"us","power_access":7,"power_economics":7,"power_quality":5,"reg_ease":8,"market":6,"sustainability":7,"notes":"TVA offers competitive large-load power agreements. No restriction legislation. Lower operating costs than coastal markets. Growing data centre presence. Good sustainability score — TVA diversifying into nuclear and renewables.","econ_note":"TVA large-load rates ~5-6¢/kWh — among the most competitive in the Southeast. Moderate Tennessee climate (PUE ~1.3). Long-term TVA power agreements provide rate certainty.","traj":"positive","traj_note":"TVA rates (~5-6¢/kWh) are among the most competitive in the Southeast. Long-term TVA agreements provide rate certainty — model this advantage explicitly.","improve":["TVA large-load agreements provide rate certainty over project life — emphasize this in financial modelling","Memphis and Nashville markets growing; Chattanooga has good grid headroom"],"govt_advice":["Work with TVA to publish a formal large-load data centre program with defined tariff structures and connection timelines.","Develop a Tennessee data centre siting certification program identifying priority sites."],"score":6.84,"grade_na":"A","rank_na":6,"grade_us":"B","rank_us":6},
+{"id":"tx","name":"Texas","abbr":"TX","country":"us","power_access":7,"power_economics":5,"power_quality":5,"reg_ease":9,"market":8,"sustainability":6,"notes":"Largest market, fastest permitting, most land. ERCOT reliability events are real operational risk. Summer heat drives cooling costs up. No restriction legislation anywhere in sight. Best regulatory ease score in North America — but sustainability penalized for grid reliability and water constraints.","econ_note":"ERCOT spot market can be competitive (~5-7¢/kWh average) but volatile. Desert and Gulf Coast heat drives PUE to 1.4-1.6, adding 40-60% to the effective cost per kWh to IT load versus cooler markets.","traj":"stable","traj_note":"Largest market, unlikely to shrink. But heat-driven PUE of 1.4-1.6 adds materially to effective $/kWh versus cooler markets — model this explicitly.","improve":["Model ERCOT spot price volatility in financial projections — on-site backup generation is essential","Select sites with access to water recycling for cooling"],"govt_advice":["ERCOT weatherization requirements for large loads should be codified and enforced.","Develop a statewide water management framework for data centre cooling."],"score":6.82,"grade_na":"B","rank_na":7,"grade_us":"B","rank_us":7},
+{"id":"ut","name":"Utah","abbr":"UT","country":"us","power_access":6,"power_economics":5,"power_quality":4,"reg_ease":8,"market":6,"sustainability":5,"notes":"Salt Lake City market growing. Fast permitting and no restriction legislation. Water stress a material constraint in an already arid state. Grid is coal-heavy.","econ_note":"","traj":"stable","traj_note":"Average conditions. Water stress and coal-heavy grid are structural negatives.","improve":["Publish large-load tariff options and interconnection timelines publicly","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":5.9,"grade_na":"C","rank_na":30,"grade_us":"C","rank_us":26},
+{"id":"va","name":"Virginia","abbr":"VA","country":"us","power_access":8,"power_economics":6,"power_quality":6,"reg_ease":6,"market":10,"sustainability":6,"notes":"Global data centre capital. Loudoun County is the most mature ecosystem on earth. HB 1515 moratorium has been 'continued' in the 2026 session — not dead, and carries meaningful political support. HB 2084 rate review adds cost uncertainty. Northern Virginia grid capacity is genuinely constrained — Dominion Energy facing supply challenges.","econ_note":"Dominion Energy large-industrial rates ~7-8¢/kWh. Moderate mid-Atlantic climate (PUE ~1.3). HB 2084 rate review creates cost uncertainty operators should model. Northern Virginia is the most mature colocation market in the world — capex/kW reflects that premium.","traj":"stable","traj_note":"Market maturity is a double-edged sword. Northern Virginia grid capacity is the binding constraint. HB 1515 'continued' (not dead) and HB 2084 rate review create uncertainty operators must model.","improve":["Model HB 2084 rate scenarios in financial projections — rate reclassification is the key risk","Advocate for Dominion Energy transmission expansion; position projects in secondary Virginia markets where grid headroom is better","Monitor HB 1515 — 'continued' means it can return in a future session"],"govt_advice":["Dominion Energy's transmission expansion plan needs to be prioritized and accelerated — the Northern Virginia grid constraint is the binding constraint on Virginia's data centre leadership.","The HB 2084 rate classification review should be conducted with full stakeholder participation and published criteria.","Develop secondary market incentive programs for Richmond, Roanoke, and the Shenandoah Valley.","Publish a Virginia data centre economic impact report. The political environment requires proactive defence of the sector's contribution."],"score":7.42,"grade_na":"A","rank_na":1,"grade_us":"A","rank_us":1},
+{"id":"vt","name":"Vermont","abbr":"VT","country":"us","power_access":4,"power_economics":5,"power_quality":6,"reg_ease":1,"market":4,"sustainability":2,"notes":"S.205 proposes a moratorium until 2030 — the longest proposed in the US. Small market, limited grid. The political direction is unambiguously hostile to large-scale data centre development. Not viable for facilities over 100 MW.","econ_note":"Green Mountain Power rates ~10-12¢/kWh. Cold Vermont climate delivers PUE ~1.15 — among the best in North America. But S.205 moratorium overrides any economic advantage.","traj":"negative","traj_note":"Cold Vermont climate delivers exceptional PUE (~1.15) and rates are high (~10-12¢/kWh). S.205 moratorium overrides any economic advantage. Not a viable jurisdiction for large-scale development.","improve":["No realistic pathway for facilities over 100 MW until 2030 at the earliest","Document economic benefit case — cold climate PUE means Vermont data centres would have among the lowest energy intensity per unit of compute in North America"],"govt_advice":["Use the S.205 moratorium period to develop the approval framework Vermont did not have. Published criteria for responsible data centre development create a pathway for acceptable projects.","Commission an economic analysis of Vermont's digital infrastructure gap and its relationship to economic competitiveness.","Engage Green Mountain Power on a data centre grid services framework."],"score":3.64,"grade_na":"F","rank_na":58,"grade_us":"F","rank_us":48},
+{"id":"wa","name":"Washington","abbr":"WA","country":"us","power_access":7,"power_economics":7,"power_quality":8,"reg_ease":6,"market":8,"sustainability":6,"notes":"Clean hydro grid in eastern WA is a genuine asset. Legislation under discussion but not enacted. BPA transmission constraints limit growth. Seattle market access is strong. Community opposition growing in established data centre corridors (Grant County).","econ_note":"BPA rates ~4-6¢/kWh — among the cheapest grid power in the US. Mild Pacific Northwest climate (PUE ~1.25). Grant County is the established hub; transmission constraints are the main capex risk.","traj":"mixed","traj_note":"BPA rates and Pacific Northwest climate are a durable economic advantage. Legislative environment bears watching.","improve":["Engage BPA directly on transmission capacity planning","BPA hydro rates (~4-6¢/kWh) combined with mild climate PUE (~1.25) are among the best all-in economics in the US"],"govt_advice":["Engage BPA on a formal eastern Washington data centre load growth plan.","Develop a proactive legislative framework on data centre energy and water use before opposition legislation advances."],"score":6.95,"grade_na":"A","rank_na":5,"grade_us":"A","rank_us":5},
+{"id":"wi","name":"Wisconsin","abbr":"WI","country":"us","power_access":6,"power_economics":7,"power_quality":5,"reg_ease":6,"market":7,"sustainability":6,"notes":"Milwaukee/Madison market. We Energies large-load programs. Legislation under discussion but not restricting. Mid-tier profile.","econ_note":"We Energies and Alliant rates ~6-7¢/kWh. Cold Wisconsin winters deliver PUE ~1.2. Competitive all-in economics similar to Minnesota and Ohio.","traj":"stable","traj_note":"We Energies rates competitive. Cold Wisconsin winters deliver PUE ~1.2. Similar economics to Minnesota and Ohio.","improve":["Cold climate free cooling is a real operating advantage — quantify in financial models","Milwaukee suburb (Waukesha County) has good grid availability"],"govt_advice":["Develop a formal data centre attraction policy.","Identify priority sites with confirmed grid capacity."],"score":6.19,"grade_na":"C","rank_na":19,"grade_us":"C","rank_us":16},
+{"id":"wv","name":"West Virginia","abbr":"WV","country":"us","power_access":5,"power_economics":7,"power_quality":3,"reg_ease":6,"market":6,"sustainability":5,"notes":"AEP Appalachian Power. Coal-heavy grid. No restriction legislation. Proximity to DC market is an advantage. Low costs.","econ_note":"","traj":"stable","traj_note":"Average conditions. DC market proximity and low costs are the primary advantages.","improve":["Publish large-load tariff options and interconnection timelines publicly","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Publish grid connection timelines and tariff structures clearly.","Commission an economic impact study."],"score":5.48,"grade_na":"C","rank_na":37,"grade_us":"C","rank_us":31},
+{"id":"wy","name":"Wyoming","abbr":"WY","country":"us","power_access":5,"power_economics":6,"power_quality":5,"reg_ease":7,"market":3,"sustainability":6,"notes":"Rocky Mountain Power. Wind energy. No restriction legislation. Very limited market proximity.","econ_note":"","traj":"stable","traj_note":"Average conditions. Market proximity is the primary structural constraint.","improve":["Publish large-load tariff options and interconnection timelines publicly","Identify priority sites with pre-assessed grid capacity"],"govt_advice":["Publish grid connection timelines and tariff structures clearly.","Commission an economic impact study."],"score":5.48,"grade_na":"C","rank_na":38,"grade_us":"C","rank_us":32}
+];
+
+// ============================================================
+// APP LOGIC — no need to edit below this line for data updates
+// ============================================================
+const provMap={};
+allData.forEach(p=>{provMap[p.id]=p;});
+['nt','nu'].forEach(id=>{if(!provMap[id])provMap[id]=provMap['yt'];});
+
+const gradeColors={A:'#2ecf7a',B:'#7ecf50',C:'#e8a730',D:'#e86020',F:'#e84040'};
+const dims=['power_access','power_economics','reg_ease','power_quality','market','sustainability'];
+const dimLabels={power_access:'Power Access',power_economics:'Power Economics',power_quality:'Power Quality',reg_ease:'Reg. Ease',market:'Market',sustainability:'Sustain.'};
+const dimColors={power_access:'#4a90d0',power_economics:'#20b8a0',power_quality:'#2ecf7a',reg_ease:'#e8a730',market:'#a070e0',sustainability:'#60c0a0'};
+const trajIcon={positive:'↑',negative:'↓',mixed:'~',stable:'→'};
+const trajColor={positive:'#2ecf7a',negative:'#e84040',mixed:'#e8a730',stable:'#6080b0'};
+const curveCtx={
+  na:'Grading all 59 provinces and states on a single bell curve. Jurisdictions compete against the full North American field.',
+  ca:'Canada-only curve — 11 provinces and territories graded against each other.',
+  us:'US-only curve — 48 states graded against each other.'
+};
+
+let currentCurve='ca',currentFilter='all',currentTab='ca';
+
+function getGrade(p){
+  if(currentCurve==='na')return p.grade_na;
+  if(currentCurve==='ca')return p.grade_ca||null;
+  if(currentCurve==='us')return p.grade_us||null;
+  return p.grade_na;
+}
+function getRank(p){
+  if(currentCurve==='na')return{rank:p.rank_na,total:59};
+  if(currentCurve==='ca')return p.rank_ca?{rank:p.rank_ca,total:11}:null;
+  if(currentCurve==='us')return p.rank_us?{rank:p.rank_us,total:48}:null;
+  return{rank:p.rank_na,total:59};
+}
+function updateGradeCounts(){
+  const relevant=allData.filter(p=>getGrade(p));
+  ['A','B','C','D','F'].forEach(g=>{
+    const n=relevant.filter(p=>getGrade(p)===g).length;
+    document.getElementById('count-'+g).textContent=n?`${n} jurisdiction${n!==1?'s':''}`:'';
+  });
+}
+function updateDistBar(){
+  const relevant=allData.filter(p=>getGrade(p));
+  ['distRows','mobileDistRows'].forEach(id=>{
+    const rows=document.getElementById(id);
+    if(!rows)return;
+    rows.innerHTML='';
+    ['A','B','C','D','F'].forEach(g=>{
+      const count=relevant.filter(p=>getGrade(p)===g).length;
+      const pct=relevant.length?count/relevant.length*100:0;
+      if(id==='mobileDistRows'){
+        const row=document.createElement('div');
+        row.className='mobile-grade-row';
+        row.innerHTML=`<span class="mobile-grade-letter" style="color:${gradeColors[g]}">${g}</span>
+          <div class="mobile-grade-bar"><div class="mobile-grade-fill" style="width:${pct}%;background:${gradeColors[g]}"></div></div>
+          <span class="mobile-grade-count" style="color:${gradeColors[g]}">${count} jurisdiction${count!==1?'s':''}</span>`;
+        rows.appendChild(row);
+      } else {
+        const row=document.createElement('div');
+        row.className='dist-row';
+        row.innerHTML=`<span class="dist-grade" style="color:${gradeColors[g]}">${g}</span>
+          <div class="dist-track"><div class="dist-fill" style="width:${pct}%;background:${gradeColors[g]}"></div></div>
+          <span class="dist-count">${count}</span>`;
+        rows.appendChild(row);
+      }
+    });
+  });
+}
+function updateMap(){
+  document.querySelectorAll('.prov').forEach(el=>{
+    const p=provMap[el.dataset.id];
+    if(!p)return;
+    const grade=getGrade(p);
+    el.style.fill=grade?gradeColors[grade]:'#1a2030';
+    el.style.opacity=grade?'':'0.3';
+  });
+  applyFilter();
+}
+function applyFilter(){
+  document.querySelectorAll('.prov').forEach(el=>{
+    const p=provMap[el.dataset.id];
+    if(!p)return;
+    const grade=getGrade(p);
+    if(!grade){el.style.opacity='0.1';return;}
+    const ok=currentFilter==='all'||(currentFilter==='ca'&&p.country==='ca')||(currentFilter==='us'&&p.country==='us')||currentFilter===grade;
+    el.style.opacity=ok?'':'0.08';
+  });
+}
+function updateCards(){
+  const gradeOrder={A:0,B:1,C:2,D:3,F:4};
+  document.querySelectorAll('.province-card').forEach(card=>{
+    const p=provMap[card.dataset.id];
+    if(!p)return;
+    const grade=getGrade(p);
+    const rankInfo=getRank(p);
+    const gc=grade?gradeColors[grade]:'#2a3a54';
+    card.style.borderLeftColor=gc;
+    card.querySelector('.card-grade').textContent=grade||'—';
+    card.querySelector('.card-grade').style.color=gc;
+    const rankEl=card.querySelector('.card-rank');
+    rankEl.textContent=rankInfo?`#${rankInfo.rank} of ${rankInfo.total}`:'not in this curve';
+    const changeEl=card.querySelector('.card-grade-change');
+    if(grade&&p.grade_na&&grade!==p.grade_na&&currentCurve!=='na'){
+      const diff=gradeOrder[p.grade_na]-gradeOrder[grade];
+      changeEl.textContent=diff>0?`↑ was ${p.grade_na} on NA curve`:`↓ was ${p.grade_na} on NA curve`;
+      changeEl.style.color=diff>0?'#2ecf7a':'#e84040';
+    }else{changeEl.textContent='';}
+    const inCurve=currentCurve==='na'||(currentCurve==='ca'&&p.country==='ca')||(currentCurve==='us'&&p.country==='us');
+    const inTab=currentTab==='all'||(currentTab==='ca'&&p.country==='ca')||(currentTab==='us'&&p.country==='us')||currentTab===grade;
+    card.classList.toggle('hidden',!inCurve||!inTab);
+    const panel=card.nextElementSibling;
+    if(panel?.classList.contains('detail-panel'))panel.classList.toggle('hidden',!inCurve||!inTab);
+  });
+  document.querySelectorAll('.detail-panel.visible').forEach(panel=>{
+    const card=panel.previousElementSibling;
+    const p=provMap[card?.dataset.id];
+    if(!p)return;
+    const grade=getGrade(p);
+    const rankInfo=getRank(p);
+    const gc=grade?gradeColors[grade]:'#2a3a54';
+    panel.querySelector('.detail-grade').textContent=grade||'—';
+    panel.querySelector('.detail-grade').style.color=gc;
+    panel.querySelector('.detail-grade-sub').textContent=rankInfo?`Score: ${p.score}/10  ·  Rank: #${rankInfo.rank}/${rankInfo.total}`:`Score: ${p.score}/10`;
+    const gradeOrder={A:0,B:1,C:2,D:3,F:4};
+    const ce=panel.querySelector('.detail-grade-change');
+    if(grade&&p.grade_na&&grade!==p.grade_na&&currentCurve!=='na'){
+      const diff=gradeOrder[p.grade_na]-gradeOrder[grade];
+      ce.textContent=diff>0?`↑ Up from ${p.grade_na} on North America curve`:`↓ Down from ${p.grade_na} on North America curve`;
+      ce.style.color=diff>0?'#2ecf7a':'#e84040';
+    }else{ce.textContent=currentCurve==='na'?'North America curve':'';}
+  });
+  const visible=document.querySelectorAll('.province-card:not(.hidden)').length;
+  const tabLabel=currentTab==='ca'?'Canadian provinces':currentTab==='us'?'US states':currentTab==='all'?'All jurisdictions':`Grade ${currentTab} jurisdictions`;
+  document.getElementById('cardsHeading').textContent=`${tabLabel} — ${visible} shown — click any card to expand`;
+}
+function refreshAll(){updateGradeCounts();updateDistBar();updateMap();updateCards();}
+
+document.querySelectorAll('.curve-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.curve-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCurve=btn.dataset.curve;
+    document.getElementById('curveContext').textContent=curveCtx[currentCurve];
+    document.querySelectorAll('.detail-panel.visible').forEach(p=>p.classList.remove('visible'));
+    refreshAll();
+  });
+});
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter=btn.dataset.filter;
+    applyFilter();
+  });
+});
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab=btn.dataset.tab;
+    document.querySelectorAll('.detail-panel.visible').forEach(p=>p.classList.remove('visible'));
+    updateCards();
+  });
+});
+
+const tooltip=document.getElementById('map-tooltip');
+document.querySelectorAll('.prov').forEach(el=>{
+  const id=el.dataset.id;
+  const p=provMap[id];
+  if(!p)return;
+  el.addEventListener('mouseenter',()=>{
+    const grade=getGrade(p);
+    const rankInfo=getRank(p);
+    const gc=grade?gradeColors[grade]:'#2a3a54';
+    document.getElementById('tt-grade').textContent=grade||'—';
+    document.getElementById('tt-grade').style.color=gc;
+    document.getElementById('tt-name').textContent=p.name;
+    document.getElementById('tt-country').textContent=p.country==='ca'?'Canada':'United States';
+    document.getElementById('tt-score').textContent=rankInfo?`Score: ${p.score}/10  ·  Rank: #${rankInfo.rank}/${rankInfo.total}`:`Score: ${p.score}/10  ·  Not in this curve`;
+    document.getElementById('tt-bars').innerHTML=dims.map(dim=>`
+      <div class="tt-bar-row">
+        <span class="tt-bar-label">${dimLabels[dim]}</span>
+        <div class="tt-bar-track"><div class="tt-bar-fill" style="width:${p[dim]*10}%;background:${dimColors[dim]}"></div></div>
+        <span style="font-size:9px;color:var(--muted);width:12px;text-align:right">${p[dim]}</span>
+      </div>`).join('');
+    tooltip.classList.add('visible');
+  });
+  el.addEventListener('mousemove',e=>{
+    const x=e.clientX+16,y=e.clientY-12,tw=tooltip.offsetWidth,th=tooltip.offsetHeight;
+    tooltip.style.left=(x+tw>window.innerWidth-12?e.clientX-tw-16:x)+'px';
+    tooltip.style.top=(y+th>window.innerHeight-12?e.clientY-th-12:y)+'px';
+  });
+  el.addEventListener('mouseleave',()=>tooltip.classList.remove('visible'));
+  el.addEventListener('click',()=>{
+    const card=document.querySelector(`.province-card[data-id="${p.id}"]`);
+    if(card&&!card.classList.contains('hidden')){
+      card.scrollIntoView({behavior:'smooth',block:'center'});
+      setTimeout(()=>{if(!card.nextElementSibling?.classList.contains('visible'))card.click();},350);
+    }
+  });
+});
+
+const grid=document.getElementById('provinceGrid');
+let activePanel=null;
+
+// Sort: Canada first, then US
+const sortedData=[...allData].sort((a,b)=>{
+  if(a.country==='ca'&&b.country==='us')return -1;
+  if(a.country==='us'&&b.country==='ca')return 1;
+  return (a.rank_na||99)-(b.rank_na||99);
+});
+
+sortedData.forEach(p=>{
+  const grade=p.grade_na;
+  const gc=gradeColors[grade]||'#2a3a54';
+  const ti=trajIcon[p.traj]||'→';
+  const tc=trajColor[p.traj]||'#6080b0';
+  const card=document.createElement('div');
+  card.className='province-card';
+  card.dataset.id=p.id;
+  card.style.borderLeftColor=gc;
+  card.innerHTML=`
+    <div class="card-header">
+      <div class="card-name-block">
+        <div class="province-name">${p.name}</div>
+        <div class="province-meta">
+          <span class="province-abbr">${p.abbr}</span>
+          <span class="country-badge ${p.country}">${p.country==='ca'?'Canada':'USA'}</span>
+        </div>
+      </div>
+      <div class="card-grade-block">
+        <div class="card-grade" style="color:${gc}">${grade}</div>
+        <div class="card-grade-change"></div>
+        <div class="card-rank">#${p.rank_na} of 59</div>
+      </div>
+    </div>
+    <div class="score-bars">
+      ${dims.map(dim=>`
+        <div class="score-row">
+          <span class="score-label">${dimLabels[dim]}</span>
+          <div class="score-track"><div class="score-fill" style="width:${p[dim]*10}%;background:${dimColors[dim]}"></div></div>
+          <span class="score-val">${p[dim]}</span>
+        </div>`).join('')}
+    </div>
+    <div class="card-notes">${p.notes}</div>
+    ${p.econ_note?`<div class="card-econ">${p.econ_note}</div>`:''}
+    <div class="traj-line">
+      <span class="traj-icon" style="color:${tc}">${ti}</span>
+      <span class="traj-text" style="color:${tc}">${p.traj.charAt(0).toUpperCase()+p.traj.slice(1)} trajectory</span>
+    </div>`;
+  const panel=document.createElement('div');
+  panel.className='detail-panel';
+  panel.innerHTML=`
+    <span class="close-btn">Close ✕</span>
+    <div class="detail-header">
+      <div class="detail-grade-block">
+        <div class="detail-grade" style="color:${gc}">${grade}</div>
+        <div class="detail-grade-sub">Score: ${p.score}/10  ·  Rank: #${p.rank_na}/59</div>
+        <div class="detail-grade-change">North America curve</div>
+      </div>
+      <div class="detail-body">
+        <div class="detail-name">${p.name}</div>
+        <div class="detail-meta">
+          <span class="province-abbr">${p.abbr}</span>
+          <span class="country-badge ${p.country}">${p.country==='ca'?'Canada':'United States'}</span>
+          <span style="font-size:10px;color:${tc};letter-spacing:0.08em;text-transform:uppercase">${ti} ${p.traj}</span>
+        </div>
+        <div class="detail-summary">${p.notes}</div>
+        ${p.econ_note?`<div class="detail-econ"><div class="detail-econ-label">⚡ Power Economics</div>${p.econ_note}</div>`:''}
+        <div class="detail-traj">
+          <div class="detail-traj-header" style="color:${tc}">${ti} Trajectory</div>
+          ${p.traj_note}
+        </div>
+      </div>
+    </div>
+    <div class="score-detail-grid">
+      ${dims.map(dim=>`
+        <div class="score-detail-item">
+          <div class="score-detail-val" style="color:${dimColors[dim]}">${p[dim]}/10</div>
+          <div class="score-detail-label">${dimLabels[dim]}</div>
+        </div>`).join('')}
+    </div>
+    <div class="audience-toggle">
+      <button class="aud-btn active" data-aud="applicant">Advice to applicants</button>
+      <button class="aud-btn" data-aud="govt">Advice to government</button>
+    </div>
+    <div class="audience-panel visible" data-aud="applicant">
+      <div class="audience-note">Addressed to investors and operators. Power economics figures are indicative — verify with utility rate schedules before committing capital.</div>
+      <div class="detail-grid">
+        <div>
+          <div class="detail-section-label">How to navigate this jurisdiction</div>
+          <ul class="detail-items">${p.improve.map(i=>`<li>${i}</li>`).join('')}</ul>
+        </div>
+        <div>
+          <div class="detail-section-label">Dimension scores</div>
+          ${dims.map(dim=>`
+            <div class="score-row" style="margin-bottom:6px">
+              <span class="score-label" style="width:96px">${dimLabels[dim]}</span>
+              <div class="score-track" style="height:6px"><div class="score-fill" style="width:${p[dim]*10}%;background:${dimColors[dim]};height:100%"></div></div>
+              <span class="score-val">${p[dim]}/10</span>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="audience-panel" data-aud="govt">
+      <div class="audience-note">Addressed to ministers and senior officials. Assumes genuine intent to improve. Advice is direct and assumes political will to act.</div>
+      <div class="detail-section-label">How to improve your grade</div>
+      <ul class="detail-items">${p.govt_advice.map(i=>`<li>${i}</li>`).join('')}</ul>
+    </div>`;
+  panel.querySelectorAll('.aud-btn').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      panel.querySelectorAll('.aud-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const aud=btn.dataset.aud;
+      panel.querySelectorAll('.audience-panel').forEach(ap=>{
+        ap.classList.toggle('visible',ap.dataset.aud===aud);
+      });
+    });
+  });
+  card.addEventListener('click',()=>{
+    if(activePanel&&activePanel!==panel){activePanel.classList.remove('visible');}
+    if(panel.classList.contains('visible')){panel.classList.remove('visible');activePanel=null;}
+    else{panel.classList.add('visible');activePanel=panel;setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'nearest'}),50);}
+    updateCards();
+  });
+  panel.querySelector('.close-btn').addEventListener('click',e=>{
+    e.stopPropagation();panel.classList.remove('visible');activePanel=null;
+  });
+  grid.appendChild(card);
+  grid.appendChild(panel);
+});
+
+refreshAll();
+</script>
+</body>
+</html>
